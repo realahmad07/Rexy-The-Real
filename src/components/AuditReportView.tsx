@@ -24,160 +24,111 @@ interface AuditReportViewProps {
   isSimulation?: boolean;
 }
 
-const IssueCard: React.FC<{ issue: AuditIssue; index: number; onCopy: (code: string) => void }> = ({ issue, index, onCopy }) => {
+const IssueItem: React.FC<{ issue: AuditIssue; index: number; onCopy: (code: string) => void }> = ({ issue, index, onCopy }) => {
   const [showFix, setShowFix] = useState(false);
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityBadge = (severity: string) => {
     switch (severity) {
-      case 'Critical': return 'text-red-500 bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30';
-      case 'High': return 'text-orange-500 bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30';
-      case 'Medium': return 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900/30';
-      case 'Low': return 'text-blue-500 bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30';
-      default: return 'text-gray-500 bg-gray-50 dark:bg-gray-900/10 border-gray-100 dark:border-gray-900/30';
+      case 'Critical': return 'bg-red-500 text-white';
+      case 'High': return 'bg-orange-500 text-white';
+      case 'Medium': return 'bg-amber-500 text-white';
+      case 'Low': return 'bg-blue-500 text-white';
+      default: return 'bg-slate-500 text-white';
     }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className="border border-slate-200 rounded-xl p-5 hover:border-rexy-primary/50 transition-colors bg-white shadow-sm"
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.05 }}
+      className="group border-b border-slate-100 dark:border-slate-800 last:border-0 py-8"
     >
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-3">
-          <div className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase border", getSeverityColor(issue.severity))}>
+      <div className="flex flex-col md:flex-row md:items-start gap-6">
+        <div className="flex-shrink-0 flex flex-col items-center gap-2">
+          <div className={cn("w-24 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-center shadow-sm", getSeverityBadge(issue.severity))}>
             {issue.severity}
           </div>
-          <h4 className="font-bold text-slate-900">{issue.title}</h4>
-        </div>
-        <div className="flex items-center gap-2">
-          {issue.reference && (
-            <span className="text-[9px] font-mono px-1.5 py-0.5 bg-gray-100 dark:bg-dark-bg text-gray-700 dark:text-dark-muted rounded border border-gray-200 dark:border-dark-border">
-              {issue.reference}
-            </span>
-          )}
           {issue.line && (
-            <span className="text-[10px] font-mono text-gray-600 dark:text-dark-muted">
-              Line: <span className="font-black text-rexy-primary dark:text-rexy-primary underline decoration-rexy-primary/30 underline-offset-2">{issue.line}</span>
-            </span>
+            <span className="text-[10px] font-mono font-bold text-slate-400">LINE {issue.line}</span>
+          )}
+        </div>
+
+        <div className="flex-1 space-y-4">
+          <div>
+            <h4 className="text-lg font-black text-slate-900 dark:text-white mb-2 group-hover:text-rexy-primary transition-colors">
+              {issue.title}
+            </h4>
+            <div className="prose prose-sm prose-slate dark:prose-invert max-w-none text-slate-600 dark:text-slate-400">
+              <Markdown>{issue.description}</Markdown>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <span className="text-[9px] font-black text-rexy-primary uppercase tracking-widest">Recommendation</span>
+              <div className="text-xs text-slate-700 dark:text-slate-300 bg-rexy-primary/5 p-3 rounded-xl border border-rexy-primary/10">
+                <Markdown>{issue.recommendation}</Markdown>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {issue.financialRisk && (
+                <div className="space-y-1">
+                  <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Financial Risk</span>
+                  <p className="text-[10px] text-slate-500 leading-tight">{issue.financialRisk}</p>
+                </div>
+              )}
+              {issue.logicRisk && (
+                <div className="space-y-1">
+                  <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Logic Risk</span>
+                  <p className="text-[10px] text-slate-500 leading-tight">{issue.logicRisk}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {issue.fixedCode && (
+            <div className="pt-2">
+              <button
+                onClick={() => setShowFix(!showFix)}
+                className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-rexy-primary uppercase tracking-widest transition-colors"
+              >
+                <Code className="w-3.5 h-3.5" />
+                {showFix ? "Hide Solution" : "View AI Solution"}
+                {showFix ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+              
+              <AnimatePresence>
+                {showFix && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden mt-4"
+                  >
+                    <div className="bg-slate-950 rounded-2xl overflow-hidden border border-slate-800">
+                      <div className="flex justify-between items-center px-4 py-2 bg-slate-900 border-b border-slate-800">
+                        <span className="text-[9px] uppercase tracking-widest text-slate-500 font-black">AI Patch v2.0</span>
+                        <button 
+                          onClick={() => onCopy(issue.fixedCode || '')}
+                          className="text-[9px] text-slate-400 hover:text-white transition-colors flex items-center gap-1 font-black uppercase tracking-widest"
+                        >
+                          <Copy className="w-3 h-3" /> Copy Code
+                        </button>
+                      </div>
+                      <div className="p-6 font-mono text-xs overflow-x-auto">
+                        <pre className="text-emerald-400 leading-relaxed">{issue.fixedCode}</pre>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
         </div>
       </div>
-      <div className="text-sm text-slate-700 mb-4 prose prose-sm max-w-none">
-        <Markdown>{issue.description}</Markdown>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-        <div className="bg-rexy-primary/5 border border-rexy-primary/10 rounded-lg p-3 flex gap-3">
-          <CheckCircle className="w-4 h-4 text-rexy-primary shrink-0 mt-0.5" />
-          <div>
-            <p className="text-[10px] font-bold text-rexy-primary uppercase tracking-wider mb-1">Recommendation</p>
-            <div className="text-xs text-slate-700 leading-relaxed prose prose-sm max-w-none">
-              <Markdown>{issue.recommendation}</Markdown>
-            </div>
-          </div>
-        </div>
-
-        {issue.financialRisk && (
-          <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg p-3 flex gap-3">
-            <DollarSign className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1">Financial Risk</p>
-              <p className="text-xs text-gray-700 dark:text-dark-text leading-relaxed">
-                {issue.financialRisk}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {issue.logicRisk && (
-          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3 flex gap-3">
-            <Brain className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Logic Risk</p>
-              <p className="text-xs text-gray-700 dark:text-dark-text leading-relaxed">
-                {issue.logicRisk}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {issue.exploitLikelihood && (
-          <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-lg p-3 flex gap-3">
-            <Skull className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-1">Exploit Scenario</p>
-              <p className="text-xs text-gray-700 dark:text-dark-text leading-relaxed">
-                {issue.exploitLikelihood}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {issue.accessControlRisk && (
-          <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-lg p-3 flex gap-3">
-            <Shield className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">Access Control Risk</p>
-              <p className="text-xs text-gray-700 dark:text-dark-text leading-relaxed">
-                {issue.accessControlRisk}
-              </p>
-            </div>
-          </div>
-        )}
-        
-        {issue.gasImpact && (
-          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 flex gap-3">
-            <Zap className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">Gas Optimization</p>
-              <p className="text-xs text-gray-700 dark:text-dark-text leading-relaxed">
-                {issue.gasImpact}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {issue.fixedCode && (
-        <div>
-          <button
-            onClick={() => setShowFix(!showFix)}
-            className="flex items-center gap-2 text-[10px] font-bold text-purple-deep dark:text-purple-light uppercase tracking-widest hover:opacity-80 transition-opacity"
-          >
-            <Code className="w-3 h-3" />
-            {showFix ? "Hide AI Patch" : "View AI Patch (Diff)"}
-            {showFix ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-          
-          <AnimatePresence>
-            {showFix && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden mt-3"
-              >
-                <div className="bg-black-matte rounded-xl overflow-hidden border border-purple-deep/20">
-                  <div className="flex justify-between items-center px-4 py-2 bg-gray-900 border-b border-gray-800">
-                    <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold">AI Suggested Fix</span>
-                    <button 
-                      onClick={() => onCopy(issue.fixedCode || '')}
-                      className="text-[9px] text-gray-400 hover:text-white transition-colors flex items-center gap-1"
-                    >
-                      <Copy className="w-2.5 h-2.5" /> Copy
-                    </button>
-                  </div>
-                  <div className="p-4 font-mono text-xs overflow-x-auto">
-                    <pre className="text-green-400/90 leading-relaxed">{issue.fixedCode}</pre>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
     </motion.div>
   );
 };
@@ -340,6 +291,8 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const [copied, setCopied] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
 
+  const [localSimulation, setLocalSimulation] = useState(isSimulation || false);
+
   const getRiskLevel = (score: number) => {
     if (score < 50) return { label: 'CRITICAL RISK', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' };
     if (score < 75) return { label: 'HIGH RISK', color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' };
@@ -349,14 +302,14 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const risk = getRiskLevel(report.score);
 
   const handleRecordOnChain = async () => {
-    if (!isSimulation && (!wallet.publicKey || !wallet.sendTransaction)) {
+    if (!localSimulation && (!wallet.publicKey || !wallet.sendTransaction)) {
       alert("Please connect your wallet to record proof on-chain.");
       return;
     }
     setIsRecordingOnChain(true);
     try {
       let signature = "";
-      if (isSimulation) {
+      if (localSimulation) {
         await new Promise(resolve => setTimeout(resolve, 1500));
         signature = "sim_proof_" + Math.random().toString(36).substring(7);
       } else {
@@ -376,14 +329,14 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   };
 
   const handleMint = async () => {
-    if (!isSimulation && !wallet.publicKey) {
+    if (!localSimulation && !wallet.publicKey) {
       alert("Please connect your wallet to mint a certificate.");
       return;
     }
     setIsMinting(true);
     try {
       let result;
-      if (isSimulation) {
+      if (localSimulation) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         result = { mint: "SimCert_" + Math.random().toString(36).substring(7) };
       } else {
@@ -581,804 +534,250 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   );
 
   return (
-    <div id="audit-report-content" className="flex flex-col gap-12 pb-20 relative">
+    <div id="audit-report-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16 relative">
       {/* BACKGROUND PATTERN */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-0">
+      <div className="fixed inset-0 pointer-events-none opacity-[0.02] z-0">
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-      </div>
-
-      {/* VERTICAL PERFORMANCE BAR (LEFT SIDE) */}
-      <div className="fixed left-4 top-1/4 bottom-1/4 w-12 z-40 hidden xl:flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
-        <div className="text-[8px] font-black text-slate-600 uppercase vertical-text mb-4 tracking-widest">Scan Performance</div>
-        <div className="flex-1 w-1 bg-slate-100 dark:bg-slate-800 rounded-full relative overflow-hidden">
-          <motion.div 
-            initial={{ height: 0 }}
-            animate={{ height: '100%' }}
-            transition={{ duration: 2, ease: "linear", repeat: Infinity }}
-            className="absolute top-0 left-0 w-full bg-gradient-to-b from-rexy-primary via-purple-500 to-rexy-primary"
-          />
-        </div>
-        {[40, 70, 45, 90, 65, 85, 100].map((h, i) => (
-          <motion.div 
-            key={i}
-            initial={{ width: 0 }}
-            whileInView={{ width: '100%' }}
-            className="h-1 bg-rexy-primary/30 rounded-full"
-            style={{ width: `${h}%` }}
-          />
-        ))}
-      </div>
-
-      <div className="relative z-10 flex flex-col gap-12 pl-0 xl:pl-16">
-        {/* STICKY MINI NAV */}
-      <div className="sticky top-4 z-50 flex justify-center pointer-events-none">
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 pointer-events-auto">
-          <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-6">
-            <Shield className="w-4 h-4 text-rexy-primary" />
-            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{report.score}/100</span>
-          </div>
-          <div className="flex gap-4">
-            <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-[10px] font-bold text-slate-600 hover:text-rexy-primary uppercase tracking-widest transition-colors">Top</button>
-            <button onClick={() => document.getElementById('findings')?.scrollIntoView({ behavior: 'smooth' })} className="text-[10px] font-bold text-slate-600 hover:text-rexy-primary uppercase tracking-widest transition-colors">Findings</button>
-            <button onClick={() => document.getElementById('exploit')?.scrollIntoView({ behavior: 'smooth' })} className="text-[10px] font-bold text-slate-600 hover:text-rexy-primary uppercase tracking-widest transition-colors">Exploit</button>
-            <button onClick={() => document.getElementById('solution')?.scrollIntoView({ behavior: 'smooth' })} className="text-[10px] font-bold text-slate-600 hover:text-rexy-primary uppercase tracking-widest transition-colors">Solution</button>
-          </div>
-        </div>
       </div>
 
       {/* HEADER SECTION */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm"
+        className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 border-b border-slate-200 dark:border-slate-800 pb-12"
       >
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none mb-2">
-            {report.contractName || 'Audit Report'}
-          </h2>
+        <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">
-              ID: {report.codeHash?.substring(0, 16)}...
-            </p>
-            <span className="w-1 h-1 bg-slate-400 rounded-full" />
-            <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">
-              {new Date(report.timestamp).toLocaleString()}
-            </p>
+            <div className="w-10 h-10 bg-rexy-primary rounded-xl flex items-center justify-center shadow-lg shadow-rexy-primary/20">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-xs font-black text-rexy-primary uppercase tracking-[0.3em]">Rexy AI Security</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+            {report.contractName || 'Audit Report'}
+          </h1>
+          <div className="flex flex-wrap items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <span className="flex items-center gap-1.5"><Hash className="w-3 h-3" /> {report.codeHash?.substring(0, 16)}</span>
+            <span className="w-1 h-1 bg-slate-300 rounded-full" />
+            <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> {new Date(report.timestamp).toLocaleString()}</span>
           </div>
         </div>
-        
+
         <div className="flex flex-wrap gap-3">
           <button 
             onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
           >
             <FileText className="w-4 h-4" /> Export PDF
           </button>
           <button 
-            onClick={() => {
-              let markdown = `# Audit Report: ${report.contractName || 'Unnamed Contract'}\n\n`;
-              markdown += `## Executive Summary\n${report.summary}\n\n`;
-              markdown += `## Security Score: ${report.score}/100\n\n`;
-              
-              markdown += `## Vulnerability Findings (${report.issues.length})\n\n`;
-              report.issues.forEach((issue, idx) => {
-                markdown += `### ${idx + 1}. ${issue.title} [${issue.severity}]\n`;
-                markdown += `**LOCATION:** **LINE ${issue.line || 'N/A'}**\n\n`;
-                markdown += `**Description:** ${issue.description}\n\n`;
-                markdown += `**Recommendation:** ${issue.recommendation}\n\n`;
-                if (issue.financialRisk) markdown += `**Financial Risk:** ${issue.financialRisk}\n\n`;
-                if (issue.logicRisk) markdown += `**Logic Risk:** ${issue.logicRisk}\n\n`;
-                if (issue.exploitLikelihood) markdown += `**Exploit Scenario:** ${issue.exploitLikelihood}\n\n`;
-                if (issue.accessControlRisk) markdown += `**Access Control Risk:** ${issue.accessControlRisk}\n\n`;
-                if (issue.gasImpact) markdown += `**Gas Optimization:** ${issue.gasImpact}\n\n`;
-                if (issue.fixedCode) {
-                  markdown += `**AI Suggested Fix:**\n\`\`\`rust\n${issue.fixedCode}\n\`\`\`\n\n`;
-                }
-                markdown += `---\n\n`;
-              });
-
-              markdown += `## Post-Audit Roadmap\n`;
-              markdown += `1. **Apply Fixes**: Sync AI-generated patches to your source code.\n`;
-              markdown += `2. **Run Tests**: Execute local test suite to verify logic integrity.\n`;
-              markdown += `3. **On-Chain Proof**: Record this audit on Solana for public trust.\n`;
-
-              const blob = new Blob([markdown], { type: 'text/markdown' });
-              const a = document.createElement('a');
-              a.href = URL.createObjectURL(blob);
-              a.download = `Audit_${report.contractName}.md`;
-              a.click();
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-          >
-            <Download className="w-4 h-4" /> Export MD
-          </button>
-          <button 
-            onClick={() => {
-              const workflow = cliService.generateGithubAction();
-              const blob = new Blob([workflow], { type: 'text/yaml' });
-              const a = document.createElement('a');
-              a.href = URL.createObjectURL(blob);
-              a.download = 'rexy-audit.yml';
-              a.click();
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors"
-          >
-            <Github className="w-4 h-4" /> GitHub Action
-          </button>
-          <button 
             onClick={handleShareBlink}
             className={cn(
-              "flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg",
-              copied ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-rexy-primary text-white hover:bg-indigo-600 shadow-rexy-primary/20"
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl",
+              copied ? "bg-emerald-500 text-white" : "bg-rexy-primary text-white hover:bg-indigo-600"
             )}
           >
             {copied ? <CheckCircle className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-            {copied ? "Copied Link!" : "Share Audit Blink"}
+            {copied ? "Link Copied" : "Share Report"}
           </button>
         </div>
       </motion.div>
 
-      {/* SECTION 1: THE HERO (RISK SCORE) */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true }}
-        className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[500px]"
-      >
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-rexy-primary via-purple-500 to-rexy-primary animate-pulse" />
-        <div className="relative z-10 flex flex-col items-center">
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-sm font-black text-slate-600 uppercase tracking-[0.4em] mb-8"
-          >
-            Security Trust Analysis
-          </motion.p>
-          
+      {/* SECTION 1: EXECUTIVE SUMMARY (FULL WIDTH) */}
+      <section className="space-y-8">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+            <FileCode className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+          </div>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Executive Summary</h2>
+        </div>
+        <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="prose prose-lg prose-slate dark:prose-invert max-w-none">
+            <Markdown>{report.summary}</Markdown>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 2: SECURITY SCORE & METRICS */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-12 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center text-center">
           <ScoreMeter score={report.score} />
-
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className={cn("mt-12 inline-flex items-center gap-3 px-8 py-3 rounded-full text-lg font-black uppercase tracking-[0.2em] border-2 shadow-xl", risk.color, risk.bg, risk.border)}
-          >
-            <AlertTriangle className="w-6 h-6" />
+          <div className={cn(
+            "mt-8 px-8 py-3 rounded-full text-xs font-black uppercase tracking-[0.2em] border-2",
+            risk.color, risk.bg, risk.border
+          )}>
             {risk.label}
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="mt-8 max-w-2xl text-slate-600 text-xs leading-relaxed"
-          >
-            <p>
-              <span className="font-bold text-rexy-primary uppercase tracking-widest mr-2">Beginner's Guide:</span>
-              This score represents the overall safety of your smart contract. A higher score means your code is more resistant to common hacks. 
-              We analyzed your logic, financial safety, and gas efficiency to provide this rating.
-            </p>
-          </motion.div>
-        </div>
-        {/* Background decoration */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
-          <Shield className="w-[600px] h-[600px] text-rexy-primary" />
-        </div>
-      </motion.div>
-
-      {/* SECTION 2: EXECUTIVE SUMMARY & METRICS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <motion.div 
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          className="lg:col-span-12 space-y-8"
-        >
-          <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <SectionTitle title="Executive Summary" icon={FileText} subtitle="High-level audit findings" />
-            <div className="prose prose-lg prose-slate dark:prose-invert max-w-none">
-              <Markdown>{report.summary}</Markdown>
-            </div>
-            
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Audit Methodology</h4>
-                <ul className="space-y-3">
-                  {['Static Analysis', 'Formal Verification', 'Symbolic Execution', 'Fuzzing Simulation'].map((item, i) => (
-                    <li key={i} className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Contract Health</h4>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-600">Code Quality</span>
-                    <span className="text-xs font-bold text-emerald-500">EXCELLENT</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-600">Test Coverage</span>
-                    <span className="text-xs font-bold text-amber-500">64%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-600">Documentation</span>
-                    <span className="text-xs font-bold text-red-500">POOR</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
-        </motion.div>
+          <p className="mt-6 text-[10px] text-slate-400 uppercase tracking-widest font-bold max-w-[200px]">
+            Overall security posture based on automated analysis
+          </p>
+        </div>
 
-        <motion.div 
-          initial={{ opacity: 0, x: 30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-8"
-        >
-          <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <SectionTitle title="AI Developer Insights" icon={Brain} subtitle="Automated code style & pattern analysis" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <p className="text-sm text-slate-700 dark:text-slate-400 leading-relaxed">
-                  The contract follows standard Anchor patterns but lacks comprehensive error handling for edge cases in the vault logic.
-                </p>
-                <div className="flex items-center gap-4 p-4 bg-rexy-primary/5 rounded-2xl border border-rexy-primary/10">
-                  <div className="w-10 h-10 rounded-full bg-rexy-primary/20 flex items-center justify-center text-rexy-primary font-bold">94</div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">Pattern Recognition</p>
-                    <p className="text-[10px] text-slate-600 uppercase tracking-widest">High Confidence</p>
-                  </div>
+        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {[
+            { label: 'Logic Integrity', value: 85, icon: Brain, color: 'text-blue-500', bg: 'bg-blue-50' },
+            { label: 'Financial Safety', value: 92, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            { label: 'Access Control', value: 78, icon: Shield, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+            { label: 'Gas Efficiency', value: 65, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
+          ].map((m, i) => (
+            <div key={i} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className={cn("p-2 rounded-lg", m.bg)}>
+                  <m.icon className={cn("w-5 h-5", m.color)} />
                 </div>
+                <span className="text-2xl font-black text-slate-900 dark:text-white">{m.value}%</span>
               </div>
-              <div className="space-y-3">
-                {['Consistent Naming', 'Modular Structure', 'Secure PDA Usage', 'Efficient Serialization'].map((insight, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs">
-                    <span className="text-slate-600">{insight}</span>
-                    <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded font-bold text-[9px]">OPTIMAL</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Security Pattern Matcher</p>
-              <SecurityPatternGraph />
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <SectionTitle title="Audit Timeline" icon={Clock} subtitle="Security verification lifecycle" />
-            <div className="flex flex-col gap-8">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Compute Load</p>
-                <MiniTimelineGraph />
-              </div>
-              <div className="space-y-6 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
-                {[
-                  { time: 'T-0s', event: 'Code Ingestion', status: 'COMPLETED' },
-                  { time: 'T+0.4s', event: 'Static Analysis', status: 'COMPLETED' },
-                  { time: 'T+0.9s', event: 'Symbolic Execution', status: 'COMPLETED' },
-                  { time: 'T+1.4s', event: 'Report Generation', status: 'COMPLETED' },
-                ].map((step, i) => (
-                  <div key={i} className="relative pl-10">
-                    <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-white dark:bg-slate-900 border-2 border-rexy-primary flex items-center justify-center z-10">
-                      <div className="w-2 h-2 rounded-full bg-rexy-primary" />
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">{step.event}</p>
-                        <p className="text-[10px] text-slate-600 font-mono">{step.time}</p>
-                      </div>
-                      <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{step.status}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, x: 30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-8"
-        >
-          <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <SectionTitle title="Risk Breakdown" icon={Brain} subtitle="Security metrics analysis" />
-            <div className="space-y-8">
-              {[
-                { label: 'Security Integrity', value: report.score, color: 'bg-rexy-primary', hint: 'Resistance to direct attacks' },
-                { label: 'Financial Safety', value: 85, color: 'bg-emerald-500', hint: 'Protection of user funds' },
-                { label: 'Logic Robustness', value: 70, color: 'bg-amber-500', hint: 'Correctness of program flow' },
-                { label: 'Gas Efficiency', value: 92, color: 'bg-purple-500', hint: 'Optimization of compute units' },
-                { label: 'Access Control', value: 88, color: 'bg-indigo-500', hint: 'Permission & authority management' },
-              ].map((metric, i) => (
-                <div key={i}>
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
-                    <span className="text-slate-600">{metric.label}</span>
-                    <span className="text-slate-900 dark:text-white">{metric.value}%</span>
-                  </div>
-                  <p className="text-[9px] text-slate-500 mb-2 italic">{metric.hint}</p>
-                  <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      whileInView={{ width: `${metric.value}%` }}
-                      transition={{ duration: 1, delay: i * 0.1 }}
-                      className={cn("h-full rounded-full", metric.color)}
-                    />
-                  </div>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{m.label}</h4>
+                <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${m.value}%` }}
+                    className={cn("h-full", m.color.replace('text', 'bg'))}
+                  />
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-
-          <div className="bg-slate-900 p-10 rounded-3xl border border-slate-800 shadow-xl text-white">
-            <h4 className="text-xs font-black text-rexy-primary uppercase tracking-widest mb-6 flex items-center gap-2">
-              <Award className="w-4 h-4" /> Proof of Audit
-            </h4>
-            <div className="space-y-4">
-              <button 
-                onClick={handleMint}
-                disabled={isMinting || !!certificateMint}
-                className={cn(
-                  "w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 border-2",
-                  certificateMint 
-                    ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/5" 
-                    : "border-rexy-primary text-rexy-primary hover:bg-rexy-primary hover:text-white"
-                )}
-              >
-                {isMinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
-                {certificateMint ? "Certificate Minted" : "Mint cNFT Certificate"}
-              </button>
-              <button 
-                onClick={handleRecordOnChain}
-                disabled={isRecordingOnChain || !!onChainProofSig}
-                className={cn(
-                  "w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 border-2",
-                  onChainProofSig 
-                    ? "border-blue-500/50 text-blue-500 bg-blue-500/5" 
-                    : "border-slate-700 text-slate-400 hover:border-white hover:text-white"
-                )}
-              >
-                {isRecordingOnChain ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hash className="w-4 h-4" />}
-                {onChainProofSig ? "Proof Recorded" : "Record On-Chain Proof"}
-              </button>
-            </div>
-            {certificateMint && (
-              <p className="mt-4 text-[9px] font-mono text-slate-500 break-all text-center">
-                MINT: {certificateMint}
-              </p>
-            )}
-          </div>
-        </motion.div>
-      </div>
+          ))}
+        </div>
+      </section>
 
       {/* SECTION 3: VULNERABILITY FINDINGS */}
-      <div id="findings" className="scroll-mt-24 space-y-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="flex justify-between items-end"
-        >
-          <SectionTitle 
-            title="Vulnerability Findings" 
-            icon={List} 
-            subtitle={`${report.issues.length} security issues identified in target contract`} 
-          />
-          <div className="flex gap-2 mb-8">
+      <section id="findings" className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+              <List className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+            </div>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Vulnerability Findings</h2>
+          </div>
+          <div className="flex gap-2">
             <span className="px-3 py-1 bg-red-500/10 text-red-500 text-[10px] font-black rounded-full border border-red-500/20 uppercase tracking-widest">
               {report.issues.filter(i => i.severity === 'Critical' || i.severity === 'High').length} High/Critical
             </span>
-            <span className="px-3 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-black rounded-full border border-amber-500/20 uppercase tracking-widest">
-              {report.issues.filter(i => i.severity === 'Medium').length} Medium
-            </span>
           </div>
-        </motion.div>
-
-        {/* SPECIAL HIGHLIGHT: Invalid Rust Keyword 'function' */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          className="bg-purple-500/5 border border-purple-500/10 rounded-[3rem] p-10"
-        >
-          <SectionTitle title="Syntax Error: Invalid Keyword 'function'" icon={Code} subtitle="Fundamental Rust syntax violations" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: 'Rust Syntax Violation', desc: "'function' is not a valid keyword in Rust. Instructions must use 'fn' for declaration." },
-              { title: 'Compilation Blocker', desc: 'The Rust compiler (rustc) will stop immediately, preventing any build artifacts from being created.' },
-              { title: 'JS/TS Transition Error', desc: 'Commonly occurs when developers transition from JavaScript or TypeScript to Rust/Anchor.' },
-              { title: 'Macro Expansion Failure', desc: 'Anchor procedural macros fail to parse the instruction, leading to cryptic build errors.' },
-              { title: 'IDE Integration Breakage', desc: 'Language servers (RLS/rust-analyzer) will fail to provide intellisense for the entire module.' },
-              { title: 'Build Pipeline Halt', desc: 'Continuous integration (CI) will fail at the earliest stage, blocking all deployment workflows.' },
-            ].map((card, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-purple-100 dark:border-purple-900/20 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center mb-4">
-                  <Terminal className="w-4 h-4 text-purple-500" />
-                </div>
-                <h5 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">{card.title}</h5>
-                <p className="text-[10px] text-slate-600 leading-relaxed">{card.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* SPECIAL HIGHLIGHT: Missing Context Struct Definition */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          className="bg-red-500/5 border border-red-500/10 rounded-[3rem] p-10"
-        >
-          <SectionTitle title="Missing Context Struct Definition" icon={AlertTriangle} subtitle="Critical Anchor framework violations" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: 'Undefined Account Validation', desc: 'The instruction lacks a corresponding #[derive(Accounts)] struct, bypassing all Anchor safety checks.' },
-              { title: 'Unchecked Account Inputs', desc: 'Raw AccountInfo usage allows arbitrary accounts to be passed without ownership verification.' },
-              { title: 'Missing Signer Constraints', desc: 'Sensitive state changes can be triggered by any user without a valid signature.' },
-              { title: 'PDA Derivation Risk', desc: 'Without proper structs, PDA seeds cannot be validated, leading to potential account spoofing.' },
-              { title: 'Data Serialization Flaw', desc: 'Manual deserialization is prone to errors, potentially allowing out-of-bounds memory access.' },
-              { title: 'Instruction Data Parsing', desc: 'Unstructured data parsing makes it impossible for Anchor to enforce type safety on inputs.' },
-            ].map((card, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-red-100 dark:border-red-900/20 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center mb-4">
-                  <Skull className="w-4 h-4 text-red-500" />
-                </div>
-                <h5 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">{card.title}</h5>
-                <p className="text-[10px] text-slate-600 leading-relaxed">{card.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* SPECIAL HIGHLIGHT: Default Template Program ID */}
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          className="bg-amber-500/5 border border-amber-500/10 rounded-[3rem] p-10"
-        >
-          <SectionTitle title="Default Template Program ID" icon={Hash} subtitle="Deployment configuration risks" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: 'Placeholder ID Detected', desc: 'The program is using the default Anchor template ID (1111...), which is insecure for mainnet.' },
-              { title: 'Deployment Mismatch', desc: 'The declared ID in declare_id!() does not match the actual program address on-chain.' },
-              { title: 'Upgrade Authority Risk', desc: 'Using a default ID may indicate a lack of proper multi-sig or upgrade authority setup.' },
-              { title: 'Mainnet Collision', desc: 'Deploying with a default ID can lead to collisions with other test programs on-chain.' },
-              { title: 'Security Policy Violation', desc: 'Most security protocols require a unique, verified program ID before interaction.' },
-              { title: 'Audit Traceability', desc: 'A non-unique ID makes it difficult to trace audit history and verify program integrity.' },
-            ].map((card, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-amber-100 dark:border-amber-900/20 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4">
-                  <Shield className="w-4 h-4 text-amber-500" />
-                </div>
-                <h5 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">{card.title}</h5>
-                <p className="text-[10px] text-slate-600 leading-relaxed">{card.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-        
-        <div className="grid grid-cols-1 gap-6">
-          {report.issues.map((issue, i) => (
-            <IssueCard key={i} issue={issue} index={i} onCopy={handleCopyFixedCode} />
-          ))}
         </div>
-      </div>
 
-      {/* SECTION 4: EXPLOIT SIMULATION */}
-      <div id="exploit" className="scroll-mt-24">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.98 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="bg-slate-900 rounded-[3rem] p-12 border border-slate-800 shadow-2xl relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-            <Skull className="w-64 h-64 text-red-500" />
-          </div>
-          
-          <div className="relative z-10">
-            <SectionTitle title="Exploit Simulation" icon={Skull} subtitle="Simulated attack vector analysis" />
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-12">
-              {[
-                { step: 1, title: 'Reconnaissance', desc: 'Attacker identifies unvalidated account inputs in the contract instructions.', color: 'text-red-400' },
-                { step: 2, title: 'Payload Crafting', desc: 'Crafts a malicious account that mimics the expected state but bypasses ownership checks.', color: 'text-orange-400' },
-                { step: 3, title: 'Execution', desc: 'Executes the instruction, successfully draining the vault of all SOL/tokens.', color: 'text-emerald-400' },
-              ].map((step, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.2 }}
-                  className="bg-slate-800/50 border border-slate-700/50 p-8 rounded-3xl relative"
-                >
-                  <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-xs font-black text-rexy-primary">
-                    {step.step}
-                  </div>
-                  <h5 className={cn("text-sm font-black uppercase tracking-widest mb-4", step.color)}>{step.title}</h5>
-                  <p className="text-sm text-slate-400 leading-relaxed">{step.desc}</p>
-                </motion.div>
+        <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm">
+          {report.issues.length > 0 ? (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {report.issues.map((issue, idx) => (
+                <IssueItem key={idx} issue={issue} index={idx} onCopy={handleCopyFixedCode} />
               ))}
             </div>
-
-            <div className="mt-12 p-8 bg-red-500/5 border border-red-500/10 rounded-3xl">
-              <h5 className="text-xs font-black text-red-500 uppercase tracking-widest mb-4">Potential Impact</h5>
-              <p className="text-sm text-slate-400 italic">
-                "If exploited, this vulnerability could lead to a total loss of user funds stored in the program's vault. The estimated financial impact is 100% of the TVL (Total Value Locked) associated with the vulnerable instruction."
-              </p>
+          ) : (
+            <div className="py-20 text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-8 h-8 text-emerald-500" />
+              </div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">No Vulnerabilities Found</h3>
+              <p className="text-sm text-slate-500">Your smart contract follows all analyzed security best practices.</p>
             </div>
-          </div>
-        </motion.div>
-      </div>
+          )}
+        </div>
+      </section>
 
-      {/* SECTION 5: THE SOLUTION (CODE PATCH) */}
-      <div id="solution" className="scroll-mt-24">
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="bg-white dark:bg-slate-900 rounded-[3rem] p-12 border border-slate-200 dark:border-slate-800 shadow-sm"
-        >
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-            <SectionTitle title="AI Security Patch" icon={Code} subtitle="Side-by-side code comparison" />
-            <div className="flex items-center gap-4">
-              {isApplied && (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500 uppercase tracking-widest animate-pulse">
-                  <CheckCircle className="w-3 h-3" /> Patches Staged
-                </span>
+      {/* SECTION 4: ON-CHAIN PROOF & VERIFICATION */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-slate-900 p-10 rounded-[2.5rem] border border-slate-800 shadow-xl text-white space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Award className="w-5 h-5 text-rexy-primary" />
+              <h2 className="text-xl font-black uppercase tracking-tight">Proof of Audit</h2>
+            </div>
+            <button 
+              onClick={() => setLocalSimulation(!localSimulation)}
+              className="flex items-center gap-2 group"
+            >
+              <div className={cn(
+                "w-8 h-4 rounded-full relative transition-colors",
+                localSimulation ? "bg-rexy-primary" : "bg-slate-700"
+              )}>
+                <div className={cn(
+                  "absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform",
+                  localSimulation ? "translate-x-4" : "translate-x-0.5"
+                )} />
+              </div>
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Simulate</span>
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <button 
+              onClick={handleRecordOnChain}
+              disabled={isRecordingOnChain || !!onChainProofSig}
+              className={cn(
+                "w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 border-2",
+                onChainProofSig 
+                  ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/5" 
+                  : "border-rexy-primary text-rexy-primary hover:bg-rexy-primary hover:text-white"
               )}
-              <button 
-                onClick={() => {
-                  setIsApplied(true);
-                  setTimeout(() => {
-                    if (window.confirm("Patches staged successfully. Would you like to sync these changes to the main editor now?")) {
-                      onApplyFix();
-                    }
-                  }, 1000);
-                }}
-                className={cn(
-                  "px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl",
-                  isApplied ? "bg-slate-100 text-slate-400 cursor-default" : "bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/20"
-                )}
-              >
-                {isApplied ? "Patches Applied" : "Apply All Patches"}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="flex flex-col border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-inner">
-              <div className="px-6 py-3 bg-red-500/5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Vulnerable Code ❌</span>
-              </div>
-              <div className="p-8 bg-slate-50 dark:bg-slate-900/50 font-mono text-xs overflow-auto max-h-[500px] leading-relaxed">
-                <pre className="text-slate-400 opacity-60">
-                  {`// Vulnerable Section\n\npub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    let account = &mut ctx.accounts.vault;\n    // MISSING SIGNER CHECK!\n    account.balance -= amount;\n    Ok(())\n}`}
-                </pre>
-              </div>
-            </div>
-            <div className="flex flex-col border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative">
-              <div className="px-6 py-3 bg-emerald-500/5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Rexy Secure Patch ✅</span>
-                <button 
-                  onClick={() => handleCopyFixedCode(report.fullFixedCode || '')}
-                  className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
+            >
+              {isRecordingOnChain ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hash className="w-4 h-4" />}
+              {onChainProofSig ? "Proof Recorded" : "Record On-Chain Proof"}
+            </button>
+            
+            {onChainProofSig && (
+              <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Signature</span>
+                  <button onClick={() => { navigator.clipboard.writeText(onChainProofSig); alert("Copied!"); }} className="text-rexy-primary hover:text-white transition-colors">
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+                <code className="text-[10px] font-mono text-slate-300 break-all block">{onChainProofSig}</code>
+                <a 
+                  href={`https://solscan.io/tx/${onChainProofSig}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                 >
-                  <Copy className="w-3 h-3" /> Copy Code
-                </button>
+                  <ExternalLink className="w-3 h-3" /> View on Solscan
+                </a>
               </div>
-              <div className="p-8 bg-slate-50 dark:bg-slate-900/50 font-mono text-xs overflow-auto max-h-[500px] leading-relaxed relative">
-                {!isApplied && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm">
-                    <Shield className="w-12 h-12 text-emerald-500 mb-4 opacity-20" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Patch Locked</p>
-                    <p className="text-[9px] text-slate-500 mt-1">Click "Apply All Patches" to reveal</p>
-                  </div>
-                )}
-                <pre className={cn("text-emerald-500 whitespace-pre", !isApplied && "blur-[4px] select-none")}>
-                  {report.fullFixedCode || "// No fixed code available"}
-                </pre>
-              </div>
-            </div>
+            )}
           </div>
-        </motion.div>
-      </div>
+        </div>
 
-      {/* SECTION 6: GAS OPTIMIZATION & EFFICIENCY */}
-      <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-sm"
-      >
-        <SectionTitle title="Gas Efficiency Analysis" icon={Zap} subtitle="Compute unit optimization report" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mt-8">
-          <div>
-            <p className="text-sm text-slate-700 dark:text-slate-400 mb-8 leading-relaxed">
-              Our engine identified several areas where compute unit consumption can be reduced by up to 15%. These optimizations focus on reducing account serialization overhead and optimizing loop iterations.
-            </p>
-            <div className="space-y-4">
+        <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Terminal className="w-5 h-5 text-slate-400" />
+              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Post-Audit Roadmap</h2>
+            </div>
+            <div className="space-y-4 pt-4">
               {[
-                { label: 'Account Deserialization', save: '4,200 CU', impact: 'High' },
-                { label: 'Instruction Data Parsing', save: '1,500 CU', impact: 'Medium' },
-                { label: 'Loop Unrolling', save: '800 CU', impact: 'Low' },
-              ].map((item, i) => (
-                <div key={i} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">{item.label}</span>
-                    <span className={cn("text-[9px] font-black uppercase tracking-widest", 
-                      item.impact === 'High' ? 'text-emerald-500' : item.impact === 'Medium' ? 'text-amber-500' : 'text-slate-600'
-                    )}>Impact: {item.impact}</span>
+                { title: 'Apply Fixes', desc: 'Integrate the AI-generated security patches into your codebase.' },
+                { title: 'Verify Logic', desc: 'Run your local test suite to ensure no logic regressions occurred.' },
+                { title: 'Public Trust', desc: 'Share your verified audit report with your community.' },
+              ].map((step, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-rexy-primary/10 text-rexy-primary flex items-center justify-center text-[10px] font-black shrink-0">{i + 1}</div>
+                  <div>
+                    <h5 className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">{step.title}</h5>
+                    <p className="text-xs text-slate-500">{step.desc}</p>
                   </div>
-                  <span className="text-xs font-mono font-bold text-rexy-primary">-{item.save}</span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
-            <div className="relative z-10">
-              <Zap className="w-12 h-12 text-amber-400 mb-4 mx-auto animate-pulse" />
-              <div className="text-4xl font-black text-white mb-2">12.4%</div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Gas Reduction</p>
-            </div>
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-500 via-transparent to-transparent" />
-            </div>
-          </div>
+          <button 
+            onClick={onApplyFix}
+            className="mt-8 w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl"
+          >
+            Apply All Fixes to Code
+          </button>
         </div>
-      </motion.div>
+      </section>
 
-      {/* SECTION 7: SECURITY COMPLIANCE CHECKLIST */}
-      <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-sm"
-      >
-        <SectionTitle title="Security Compliance" icon={Shield} subtitle="Standard security check verification" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-8">
-          {[
-            { label: 'Signer Validation', status: 'PASSED' },
-            { label: 'Owner Checks', status: 'PASSED' },
-            { label: 'Integer Overflow', status: 'PASSED' },
-            { label: 'Reentrancy', status: 'PASSED' },
-            { label: 'Account Spoofing', status: 'FAILED', critical: true },
-            { label: 'PDA Validation', status: 'PASSED' },
-            { label: 'Rent Exemption', status: 'PASSED' },
-            { label: 'Data Serialization', status: 'PASSED' },
-            { label: 'Access Control', status: 'PASSED' },
-            { label: 'Oracle Safety', status: 'N/A' },
-            { label: 'Flash Loan Safety', status: 'N/A' },
-            { label: 'Upgradeability', status: 'PASSED' },
-          ].map((check, i) => (
-            <div key={i} className={cn(
-              "p-4 rounded-2xl border flex flex-col gap-2 transition-all",
-              check.status === 'PASSED' ? "bg-emerald-500/5 border-emerald-500/10" : 
-              check.status === 'FAILED' ? "bg-red-500/5 border-red-500/10 shadow-lg shadow-red-500/5" : 
-              "bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800"
-            )}>
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight leading-tight">{check.label}</span>
-                {check.status === 'PASSED' ? <CheckCircle className="w-3 h-3 text-emerald-500" /> : 
-                 check.status === 'FAILED' ? <AlertTriangle className="w-3 h-3 text-red-500" /> : 
-                 <Info className="w-3 h-3 text-slate-400" />}
-              </div>
-              <span className={cn("text-[9px] font-black uppercase tracking-widest", 
-                check.status === 'PASSED' ? "text-emerald-500" : 
-                check.status === 'FAILED' ? "text-red-500" : "text-slate-400"
-              )}>{check.status}</span>
-            </div>
-          ))}
+      {/* FOOTER LOGO */}
+      <div className="flex flex-col items-center justify-center pt-12 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2 opacity-20 grayscale">
+          <Shield className="w-5 h-5" />
+          <span className="text-sm font-black uppercase tracking-[0.4em]">Rexy AI Security</span>
         </div>
-      </motion.div>
-
-      {/* SECTION 8: SECURITY ROADMAP */}
-      <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-sm"
-      >
-        <SectionTitle title="Security Roadmap" icon={Zap} subtitle="Recommended post-audit actions for developers" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-          {[
-            { 
-              title: '1. Patch & Secure', 
-              desc: 'The most critical step. Use the "Apply All Patches" button above to automatically fix the identified vulnerabilities in your code. This ensures your contract is no longer vulnerable to the confirmed exploit vectors.', 
-              status: 'URGENT', 
-              icon: Code,
-              action: 'Fixes vulnerabilities immediately'
-            },
-            { 
-              title: '2. Verify & Test', 
-              desc: 'After applying fixes, run your local test suite. Security is a continuous process; automated fixes should always be verified by running your unit and integration tests to ensure no logic was broken.', 
-              status: 'REQUIRED', 
-              icon: List,
-              action: 'Ensures functional integrity'
-            },
-            { 
-              title: '3. Certify & Deploy', 
-              desc: 'Record your audit proof on the Solana blockchain and mint your cNFT certificate. This provides public, immutable proof that your contract has been audited by Rexy AI, building trust with your users.', 
-              status: 'RECOMMENDED', 
-              icon: Award,
-              action: 'Builds community trust'
-            },
-          ].map((item, i) => (
-            <div key={i} className="p-8 rounded-[2.5rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex flex-col items-start text-left transition-all hover:shadow-xl hover:-translate-y-1">
-              <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center mb-6 shadow-sm">
-                <item.icon className="w-6 h-6 text-rexy-primary" />
-              </div>
-              <span className="text-[10px] font-black text-rexy-primary uppercase tracking-widest mb-3 px-3 py-1 bg-rexy-primary/10 rounded-full">{item.status}</span>
-              <h6 className="text-lg font-black text-slate-900 dark:text-white mb-3 tracking-tight">{item.title}</h6>
-              <p className="text-sm text-slate-600 leading-relaxed mb-6">{item.desc}</p>
-              <div className="mt-auto pt-6 border-t border-slate-200 dark:border-slate-700 w-full">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Goal: {item.action}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* SECTION 7: CONSOLE LOGS */}
-      <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="bg-slate-900 rounded-[3rem] border border-slate-800 shadow-2xl overflow-hidden"
-      >
-        <div className="px-8 py-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Terminal className="w-4 h-4 text-slate-400" />
-            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Rexy Audit Console v2.4.0</span>
-          </div>
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500/20" />
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
-          </div>
-        </div>
-        <div className="p-10 font-mono text-xs text-emerald-400/80 max-h-[400px] overflow-auto leading-relaxed">
-          <div className="space-y-2">
-            <p className="text-slate-500">[SYSTEM] Initializing Rexy Security Engine...</p>
-            <p className="text-slate-500">[SYSTEM] Target: {report.contractName || 'contract'}</p>
-            <p className="text-slate-500">[SCAN] Performing static analysis on {report.issues.length} entry points...</p>
-            <p className="text-amber-400">[WARN] Potential unvalidated account found at line 42</p>
-            <p className="text-slate-500">[SCAN] Running symbolic execution (1024 paths)...</p>
-            <p className="text-red-500">[CRIT] Exploit confirmed: Account spoofing possible in withdraw()</p>
-            <p className="text-slate-500">[SCAN] Calculating gas consumption...</p>
-            <p className="text-emerald-400">[INFO] Gas optimization: 12% reduction possible in loop</p>
-            <p className="text-slate-500">[SYSTEM] Generating final report...</p>
-            <p className="text-emerald-500">[DONE] Audit completed in 1.42s</p>
-            <p className="text-white mt-4">{">"} rexy-audit --target {report.contractName || 'contract'} --mode deep-scan</p>
-            <p className="text-emerald-500">{">"} Audit Success: {report.issues.length} vulnerabilities found. Score: {report.score}/100</p>
-            <p className="text-slate-500">{">"} Proof recorded on-chain: {onChainProofSig || 'Pending'}</p>
-            <p className="mt-4 text-white animate-pulse">_</p>
-          </div>
-        </div>
-      </motion.div>
+        <p className="text-[9px] text-slate-400 uppercase tracking-widest mt-4">Automated Smart Contract Audit Engine v2.4.0</p>
+      </div>
     </div>
-  </div>
-);
+  );
 };

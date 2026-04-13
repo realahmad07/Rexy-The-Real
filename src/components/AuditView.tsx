@@ -3,10 +3,10 @@ import { performAudit } from '../services/geminiService';
 import { Loader2, ShieldAlert, AlertCircle, Code2, Wallet, ExternalLink } from 'lucide-react';
 import { AuditReport } from '../types';
 import { AuditReportView } from './AuditReportView';
-import { auth, db } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { requestPayment } from '../services/solanaService';
+import { requestPayment, recordAuditOnChain } from '../services/solanaService';
 
 const AuditView: React.FC = () => {
   const { connected } = useWallet();
@@ -62,9 +62,9 @@ const AuditView: React.FC = () => {
       let signature = "simulated_proof_" + Math.random().toString(36).substring(7);
       
       if (!isSimulation) {
-        // Step 1: Request Payment (0 SOL for testing - only gas)
-        console.log("Requesting gas-only payment (0 SOL)...");
-        signature = await requestPayment(wallet, 0);
+        // Step 1: Request Payment (Minimal fee for Mainnet testing)
+        console.log("Requesting audit payment (0.00001 SOL)...");
+        signature = await requestPayment(wallet, 0.00001);
         console.log("Payment successful:", signature);
       } else {
         // Simulate delay for simulation mode
@@ -78,11 +78,25 @@ const AuditView: React.FC = () => {
       // Step 2: Perform AI Audit
       const result = await performAudit(auditCode);
       if (result) {
+        let finalSignature = signature;
+
+        // Step 3: Record Proof On-Chain (Real proof with hash)
+        if (!isSimulation && connected && wallet.publicKey) {
+          try {
+            console.log("Recording audit proof on-chain...");
+            const proofSignature = await recordAuditOnChain(wallet, result.id || "rexy_" + Date.now(), result.score);
+            finalSignature = proofSignature;
+            console.log("On-chain proof recorded:", proofSignature);
+          } catch (proofErr) {
+            console.warn("Failed to record on-chain proof, falling back to payment signature:", proofErr);
+          }
+        }
+
         const auditData = {
           ...result,
           userId: connected && wallet.publicKey ? wallet.publicKey.toString() : 'anonymous',
           timestamp: Date.now(),
-          onChainProof: signature,
+          onChainProof: finalSignature,
           status: 'success'
         };
 
@@ -96,6 +110,13 @@ const AuditView: React.FC = () => {
             auditData.id = docRef.id;
           } catch (fsErr) {
             console.error("Error saving audit to Firestore:", fsErr);
+            if (fsErr instanceof Error && fsErr.message.includes('permission')) {
+              try {
+                handleFirestoreError(fsErr, OperationType.CREATE, 'audits');
+              } catch (e) {
+                // Already handled
+              }
+            }
           }
         }
 

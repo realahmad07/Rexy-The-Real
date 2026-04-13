@@ -4,7 +4,7 @@ import { LiveBlockchainGraph } from './LiveBlockchainGraph';
 import { VulnerabilityFeed } from './VulnerabilityFeed';
 import { motion } from 'motion/react';
 import { Shield, Zap, Activity, Users } from 'lucide-react';
-import { db } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { AuditReport } from '../types';
 
@@ -18,6 +18,13 @@ const Dashboard: React.FC = () => {
       setRecentAudits(audits);
     }, (error) => {
       console.error("Firestore Error in Dashboard audits listener:", error);
+      if (error.message.includes('permission')) {
+        try {
+          handleFirestoreError(error, OperationType.LIST, 'audits');
+        } catch (e) {
+          // Handled
+        }
+      }
     });
     return () => unsubscribe();
   }, []);

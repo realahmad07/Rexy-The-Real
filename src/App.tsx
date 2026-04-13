@@ -9,8 +9,8 @@ import MonitoringView from './components/MonitoringView';
 import InfoView from './components/InfoView';
 import OnboardingModal from './components/OnboardingModal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from './firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from './firebase';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 const App: React.FC = () => {
   const { connected, publicKey } = useWallet();
@@ -24,17 +24,36 @@ const App: React.FC = () => {
       
       // Save user profile to Firestore
       const saveUserProfile = async () => {
+        const uid = publicKey.toString();
+        const userRef = doc(db, 'users', uid);
         try {
-          const userRef = doc(db, 'users', publicKey.toString());
-          await setDoc(userRef, {
-            uid: publicKey.toString(),
-            walletAddress: publicKey.toString(),
-            createdAt: serverTimestamp(),
-            role: 'user',
-            lastActive: serverTimestamp()
-          }, { merge: true });
+          const userSnap = await getDoc(userRef);
+          
+          if (!userSnap.exists()) {
+            // New user
+            await setDoc(userRef, {
+              uid: uid,
+              walletAddress: uid,
+              createdAt: serverTimestamp(),
+              role: 'user',
+              lastActive: serverTimestamp()
+            });
+          } else {
+            // Existing user - only update lastActive to avoid breaking createdAt immutability rule
+            await updateDoc(userRef, {
+              lastActive: serverTimestamp()
+            });
+          }
         } catch (error) {
           console.error("Error saving user profile:", error);
+          // Only handle if it's a permission error or similar
+          if (error instanceof Error && error.message.includes('permission')) {
+            try {
+              handleFirestoreError(error, OperationType.WRITE, `users/${uid}`);
+            } catch (e) {
+              // Error is already logged and re-thrown by handleFirestoreError
+            }
+          }
         }
       };
       

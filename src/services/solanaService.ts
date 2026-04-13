@@ -3,12 +3,12 @@ import { WalletContextState } from '@solana/wallet-adapter-react';
 
 const HELIUS_API_KEY = (import.meta.env.VITE_HELIUS_API_KEY || "").trim();
 const TREASURY_ADDRESS = (import.meta.env.VITE_TREASURY_ADDRESS || "").trim();
-const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXDe96z9Nc8nvsyqVJotgnPNCcJKJCPU");
+const MEMO_PROGRAM_ID = new PublicKey("Memo1UhkJR67pMbE5SEBybtwpE7WUX7en7km72nUMp9");
 
 // Use a fallback public RPC if Helius key is missing to avoid 403
 const RPC_URL = HELIUS_API_KEY 
-  ? `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
-  : "https://api.devnet.solana.com";
+  ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
+  : "https://api.mainnet-beta.solana.com";
 
 if (HELIUS_API_KEY) {
   console.log("Helius API Key detected:", HELIUS_API_KEY.substring(0, 4) + "..." + HELIUS_API_KEY.substring(HELIUS_API_KEY.length - 4));
@@ -24,18 +24,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
   }
 
   try {
-    // Add priority fees to help transaction land during congestion
-    // Optimized compute units for simple transfers/memos
-    const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({ 
-      units: 10000 
-    });
-    const addPriorityFee = ComputeBudgetProgram.setComputeUnitPrice({ 
-      microLamports: 50000 
-    });
-
-    const transaction = new Transaction()
-      .add(modifyComputeUnits)
-      .add(addPriorityFee);
+    const transaction = new Transaction();
 
     if (amount > 0) {
       if (!TREASURY_ADDRESS || TREASURY_ADDRESS.includes("placeholder")) {
@@ -54,47 +43,53 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
         new TransactionInstruction({
           keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
           programId: MEMO_PROGRAM_ID,
-          data: Buffer.from("Rexy Audit Payment: Free Tier / Testing", "utf-8"),
+          data: Buffer.from("Rexy Audit Payment: Free Tier / Testing"),
         })
       );
     }
 
-    const {
-      context: { slot: minContextSlot },
-      value: { blockhash, lastValidBlockHeight }
-    } = await connection.getLatestBlockhashAndContext({
-      commitment: 'confirmed'
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash({
+      commitment: 'processed'
     });
+    
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = wallet.publicKey;
 
     const signature = await wallet.sendTransaction(transaction, connection, { 
-      minContextSlot,
       preflightCommitment: 'processed',
-      skipPreflight: false,
+      skipPreflight: true,
       maxRetries: 5
     });
     
     console.log("Transaction sent, awaiting confirmation:", signature);
 
-    // Use a more resilient confirmation strategy with manual fallback
-    try {
-      const confirmation = await connection.confirmTransaction({
-        blockhash,
-        lastValidBlockHeight,
-        signature,
-      }, 'confirmed');
+    // Robust polling confirmation strategy
+    let confirmed = false;
+    const start = Date.now();
+    const timeout = 300000; // 300 seconds polling
 
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${confirmation.value.err.toString()}`);
-      }
-    } catch (confirmError: any) {
-      console.warn("Standard confirmation failed, checking signature status manually...", confirmError);
-      
-      // Manual fallback check
+    while (Date.now() - start < timeout) {
       const status = await connection.getSignatureStatus(signature);
       if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
-        console.log("Transaction confirmed via manual status check.");
-      } else {
-        throw confirmError;
+        if (status.value.err) {
+          throw new Error(`Transaction failed: ${status.value.err.toString()}`);
+        }
+        confirmed = true;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Poll every 1s
+    }
+
+    if (!confirmed) {
+      // One last try with standard confirm
+      try {
+        await connection.confirmTransaction({
+          blockhash,
+          lastValidBlockHeight,
+          signature,
+        }, 'confirmed');
+      } catch (e) {
+        throw new Error("Transaction confirmation timed out. It might still land on-chain, but the app couldn't verify it in time. Please check your wallet history.");
       }
     }
     
@@ -109,7 +104,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     }
 
     if (errorMessage.includes("insufficient funds") || errorMessage.includes("0x1")) {
-      throw new Error("Insufficient SOL for transaction fees. Even 0 SOL audits require a tiny amount of SOL for gas. Please get some Devnet SOL from: https://faucet.solana.com/");
+      throw new Error("Insufficient SOL for transaction fees. Please ensure you have at least 0.001 SOL in your Mainnet wallet for gas.");
     }
 
     if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("api key") || errorMessage.includes("403")) {
@@ -138,34 +133,39 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
     });
 
     const transaction = new Transaction().add(
-      ComputeBudgetProgram.setComputeUnitLimit({ units: 5000 }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 10000 }),
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 10000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 500000 }),
       new TransactionInstruction({
         keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
         programId: MEMO_PROGRAM_ID,
-        data: Buffer.from(memoData, "utf-8"),
+        data: Buffer.from(memoData),
       })
     );
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('processed');
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
 
     const signature = await wallet.sendTransaction(transaction, connection, {
       preflightCommitment: 'processed',
+      skipPreflight: true,
       maxRetries: 5
     });
 
-    try {
-      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
-    } catch (confirmError: any) {
-      console.warn("Audit record confirmation failed, checking status manually...", confirmError);
+    // Robust polling for audit record
+    let confirmed = false;
+    const start = Date.now();
+    while (Date.now() - start < 300000) {
       const status = await connection.getSignatureStatus(signature);
       if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
-        console.log("Audit record confirmed via manual status check.");
-      } else {
-        throw confirmError;
+        confirmed = true;
+        break;
       }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    if (!confirmed) {
+      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
     }
     
     return signature;
@@ -185,41 +185,64 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     throw new Error("Wallet not connected");
   }
 
-  const CERTIFICATE_FEE = 0.05; // 0.05 SOL for the certificate
+  const CERTIFICATE_FEE = 0.00001; // Minimal fee for Mainnet testing
 
   try {
     console.log(`Minting cNFT Certificate for audit ${auditData.id} to ${wallet.publicKey.toBase58()}`);
     
     // Step 1: Process Payment for the Certificate
-    if (!TREASURY_ADDRESS || TREASURY_ADDRESS.includes("placeholder")) {
-      throw new Error("Treasury address not configured. Please set VITE_TREASURY_ADDRESS.");
-    }
-
     const transaction = new Transaction().add(
       ComputeBudgetProgram.setComputeUnitLimit({ units: 10000 }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 }),
-      SystemProgram.transfer({
-        fromPubkey: wallet.publicKey,
-        toPubkey: new PublicKey(TREASURY_ADDRESS.trim()),
-        lamports: Math.floor(CERTIFICATE_FEE * LAMPORTS_PER_SOL),
-      }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1000000 })
+    );
+
+    if (CERTIFICATE_FEE > 0) {
+      if (!TREASURY_ADDRESS || TREASURY_ADDRESS.includes("placeholder")) {
+        throw new Error("Treasury address not configured. Please set VITE_TREASURY_ADDRESS.");
+      }
+      transaction.add(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: new PublicKey(TREASURY_ADDRESS.trim()),
+          lamports: Math.floor(CERTIFICATE_FEE * LAMPORTS_PER_SOL),
+        })
+      );
+    }
+
+    // Always add a memo for proof of action
+    transaction.add(
       new TransactionInstruction({
         keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
         programId: MEMO_PROGRAM_ID,
-        data: Buffer.from(`Rexy Certificate Mint: ${auditData.id}`, "utf-8"),
+        data: Buffer.from(`Rexy Certificate Mint: ${auditData.id}`),
       })
     );
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('processed');
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
 
     const signature = await wallet.sendTransaction(transaction, connection, {
       preflightCommitment: 'processed',
+      skipPreflight: true,
       maxRetries: 5
     });
 
-    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+    // Robust polling for certificate
+    let confirmed = false;
+    const start = Date.now();
+    while (Date.now() - start < 300000) {
+      const status = await connection.getSignatureStatus(signature);
+      if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
+        confirmed = true;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    if (!confirmed) {
+      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+    }
     
     // Step 2: Simulate cNFT Minting (In production, this would be a backend call to Helius/Underdog)
     await new Promise(resolve => setTimeout(resolve, 2000));

@@ -48,24 +48,28 @@ service cloud.firestore {
          (request.auth.token.email == "247280@students.au.edu.pk" && request.auth.token.email_verified == true));
     }
 
+    function isRecent(time) {
+      return time > request.time - duration.value(5, 'm') &&
+             time <= request.time;
+    }
+
     function isValidUser(data) {
       let requiredFields = ['uid', 'createdAt', 'role'];
-      let optionalFields = ['email', 'walletAddress', 'lastActive', 'sessionId', 'userAgent', 'ipAddress'];
       return data.keys().hasAll(requiredFields) &&
              data.uid is string &&
              data.role in ['user', 'admin'] &&
              data.createdAt is timestamp &&
              (!('lastActive' in data) || data.lastActive is timestamp) &&
-             (!('sessionId' in data) || data.sessionId is string) &&
-             (!('userAgent' in data) || data.userAgent is string);
+             (!('walletAddress' in data) || data.walletAddress is string);
     }
 
     function isValidAudit(data) {
-      return data.keys().hasAll(['id', 'userId', 'codeHash', 'result', 'timestamp', 'status']) &&
-             data.id is string &&
+      return data.keys().hasAll(['userId', 'codeHash', 'score', 'summary', 'issues', 'timestamp', 'status']) &&
              data.userId is string &&
              data.codeHash is string &&
-             data.result is map &&
+             data.score is number &&
+             data.summary is string &&
+             data.issues is list &&
              data.timestamp is timestamp &&
              data.status in ['success', 'failed'];
     }
@@ -75,13 +79,13 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin() || (!isAuthenticated() && userId.size() >= 32 && userId.size() <= 44);
+      allow read: if isOwner(userId) || isAdmin() || (userId.size() >= 32 && userId.size() <= 44);
       allow create: if isValidUser(request.resource.data) && 
                     (
                       (isAuthenticated() && isOwner(userId) && request.resource.data.role == 'user') || 
                       (!isAuthenticated() && userId == request.resource.data.uid && userId.size() >= 32 && userId.size() <= 44 && request.resource.data.role == 'user') ||
                       isAdmin()
-                    );
+                    ) && isRecent(request.resource.data.createdAt);
       allow update: if isValidUser(request.resource.data) && 
                     (
                       (isAuthenticated() && isOwner(userId) && request.resource.data.role == resource.data.role) || 
@@ -94,8 +98,11 @@ service cloud.firestore {
 
     match /audits/{auditId} {
       allow read: if true;
-      allow create: if isAuthenticated() && isValidAudit(request.resource.data) && 
-                    (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidAudit(request.resource.data) && 
+                    (
+                      (isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin())) ||
+                      (!isAuthenticated() && request.resource.data.userId is string && request.resource.data.userId.size() >= 32 && request.resource.data.userId.size() <= 44)
+                    );
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
