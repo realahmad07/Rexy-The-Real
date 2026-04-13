@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user authentication and profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID from Firebase Auth or Solana Wallet." },
+        "email": { "type": "string", "format": "email", "description": "User's email address (if using email login)." },
+        "walletAddress": { "type": "string", "description": "User's Solana wallet address (if using Web3 login)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User's role in the system." },
+        "lastActive": { "type": "string", "format": "date-time", "description": "When the user was last active." },
+        "sessionId": { "type": "string", "description": "Current active session ID." },
+        "userAgent": { "type": "string", "description": "User agent of the active session." },
+        "ipAddress": { "type": "string", "description": "IP address (if available) of the active session." }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "AuditRecord": {
+      "title": "Audit Record",
+      "description": "Stores the results of a smart contract audit.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique audit ID." },
+        "userId": { "type": "string", "description": "ID of the user who requested the audit." },
+        "codeHash": { "type": "string", "description": "SHA-256 hash of the audited code." },
+        "codeSnippet": { "type": "string", "description": "A snippet of the audited code." },
+        "result": { "type": "object", "description": "The audit report JSON." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the audit was performed." },
+        "status": { "type": "string", "enum": ["success", "failed"], "description": "Status of the audit." },
+        "cost": { "type": "number", "description": "Cost of the audit in SOL (simulated)." },
+        "nftMinted": { "type": "boolean", "description": "Whether an NFT was minted for this audit." },
+        "nftAddress": { "type": "string", "description": "Address of the minted NFT (simulated)." }
+      },
+      "required": ["id", "userId", "codeHash", "result", "timestamp", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/audits/{auditId}": {
+      "schema": "AuditRecord",
+      "description": "Audit record documents."
+    }
+  }
+}

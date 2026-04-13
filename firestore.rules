@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (optional)
+    //   - walletAddress: string (optional)
+    //   - createdAt: timestamp (required)
+    //   - role: string (required, enum: ['user', 'admin'])
+    //
+    // Collection: audits
+    // Document ID: {auditId}
+    // Fields:
+    //   - id: string (required)
+    //   - userId: string (required)
+    //   - codeHash: string (required)
+    //   - codeSnippet: string (optional)
+    //   - result: map (required)
+    //   - timestamp: timestamp (required)
+    //   - status: string (required, enum: ['success', 'failed'])
+    //   - cost: number (optional)
+    //   - nftMinted: bool (optional)
+    //   - nftAddress: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "247280@students.au.edu.pk" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      let requiredFields = ['uid', 'createdAt', 'role'];
+      let optionalFields = ['email', 'walletAddress', 'lastActive', 'sessionId', 'userAgent', 'ipAddress'];
+      return data.keys().hasAll(requiredFields) &&
+             data.uid is string &&
+             data.role in ['user', 'admin'] &&
+             data.createdAt is timestamp &&
+             (!('lastActive' in data) || data.lastActive is timestamp) &&
+             (!('sessionId' in data) || data.sessionId is string) &&
+             (!('userAgent' in data) || data.userAgent is string);
+    }
+
+    function isValidAudit(data) {
+      return data.keys().hasAll(['id', 'userId', 'codeHash', 'result', 'timestamp', 'status']) &&
+             data.id is string &&
+             data.userId is string &&
+             data.codeHash is string &&
+             data.result is map &&
+             data.timestamp is timestamp &&
+             data.status in ['success', 'failed'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin() || (!isAuthenticated() && userId.size() >= 32 && userId.size() <= 44);
+      allow create: if isValidUser(request.resource.data) && 
+                    (
+                      (isAuthenticated() && isOwner(userId) && request.resource.data.role == 'user') || 
+                      (!isAuthenticated() && userId == request.resource.data.uid && userId.size() >= 32 && userId.size() <= 44 && request.resource.data.role == 'user') ||
+                      isAdmin()
+                    );
+      allow update: if isValidUser(request.resource.data) && 
+                    (
+                      (isAuthenticated() && isOwner(userId) && request.resource.data.role == resource.data.role) || 
+                      (!isAuthenticated() && userId == resource.id && userId.size() >= 32 && userId.size() <= 44 && request.resource.data.role == resource.data.role) ||
+                      isAdmin()
+                    ) &&
+                    request.resource.data.uid == resource.data.uid &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    match /audits/{auditId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidAudit(request.resource.data) && 
+                    (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
