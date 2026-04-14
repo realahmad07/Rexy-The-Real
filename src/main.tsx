@@ -1,17 +1,12 @@
+import './polyfills';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Buffer } from 'buffer';
 import App from './App';
 import { WalletContextProvider } from './components/WalletContextProvider';
 import ErrorBoundary from './components/ErrorBoundary';
 import { db } from './firebase';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import './index.css';
-
-// Polyfill Buffer for Solana SDK
-if (typeof window !== 'undefined') {
-  window.Buffer = Buffer;
-}
 
 // Test Firestore connection
 async function testConnection() {

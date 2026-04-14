@@ -5,12 +5,13 @@ import { AuditReport } from '../types';
 import { AuditReportView } from './AuditReportView';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { requestPayment, recordAuditOnChain } from '../services/solanaService';
 
 const AuditView: React.FC = () => {
   const { connected } = useWallet();
   const wallet = useWallet();
+  const { connection } = useConnection();
   const [code, setCode] = useState('');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,7 +51,7 @@ const AuditView: React.FC = () => {
     }
 
     if (!auditCode) return;
-    if (!connected && !isSimulation) {
+    if (!isSimulation && (!connected || !wallet.publicKey)) {
       setError("Please connect your Phantom wallet first.");
       return;
     }
@@ -64,7 +65,7 @@ const AuditView: React.FC = () => {
       if (!isSimulation) {
         // Step 1: Request Payment (Minimal fee for Mainnet testing)
         console.log("Requesting audit payment (0.00001 SOL)...");
-        signature = await requestPayment(wallet, 0.00001);
+        signature = await requestPayment(wallet, 0.00001, connection);
         console.log("Payment successful:", signature);
       } else {
         // Simulate delay for simulation mode
@@ -84,7 +85,7 @@ const AuditView: React.FC = () => {
         if (!isSimulation && connected && wallet.publicKey) {
           try {
             console.log("Recording audit proof on-chain...");
-            const proofSignature = await recordAuditOnChain(wallet, result.id || "rexy_" + Date.now(), result.score);
+            const proofSignature = await recordAuditOnChain(wallet, result.id || "rexy_" + Date.now(), result.score, connection);
             finalSignature = proofSignature;
             console.log("On-chain proof recorded:", proofSignature);
           } catch (proofErr) {

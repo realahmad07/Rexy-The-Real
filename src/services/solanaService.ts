@@ -1,39 +1,82 @@
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, ComputeBudgetProgram, TransactionInstruction } from '@solana/web3.js';
 import { WalletContextState } from '@solana/wallet-adapter-react';
+import { Buffer } from 'buffer';
 
-const HELIUS_API_KEY = (import.meta.env.VITE_HELIUS_API_KEY || "").trim();
-const TREASURY_ADDRESS = (import.meta.env.VITE_TREASURY_ADDRESS || "").trim();
-const MEMO_PROGRAM_ID = new PublicKey("Memo1UhkJR67pMbE5SEBybtwpE7WUX7en7km72nUMp9");
+// Helper to safely access environment variables
+const getEnvVar = (name: string): string => {
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      return (import.meta.env[name] || "").trim();
+    }
+    return "";
+  } catch (e) {
+    return "";
+  }
+};
 
-// Use a fallback public RPC if Helius key is missing to avoid 403
-const RPC_URL = HELIUS_API_KEY 
+const HELIUS_API_KEY = getEnvVar('VITE_HELIUS_API_KEY');
+const isHeliusValid = HELIUS_API_KEY && !HELIUS_API_KEY.includes('placeholder') && HELIUS_API_KEY.length > 10;
+
+/**
+ * Safely converts the treasury address string to a PublicKey.
+ * Throws a descriptive error if the address is missing or invalid.
+ */
+export function getTreasuryPublicKey(): PublicKey {
+  let address = getEnvVar('VITE_TREASURY_ADDRESS');
+  
+  // Remove potential quotes if user entered them in settings
+  address = address.replace(/['"]/g, '');
+
+  if (!address || address.includes("placeholder") || address.length < 32) {
+    console.warn("Treasury address check failed:", { address, length: address?.length });
+    throw new Error("Treasury address not configured. Please set a valid VITE_TREASURY_ADDRESS in your environment variables.");
+  }
+  try {
+    console.log("Attempting to create PublicKey with:", address);
+    return new PublicKey(address);
+  } catch (e) {
+    console.error("PublicKey creation failed for address:", address, e);
+    throw new Error(`Invalid Treasury Address: "${address}". Please ensure VITE_TREASURY_ADDRESS is a valid Solana base58 public key.`);
+  }
+}
+
+// Lazy-load Memo Program ID to avoid top-level PublicKey creation issues
+let memoProgramId: PublicKey | null = null;
+function getMemoProgramId(): PublicKey {
+  if (!memoProgramId) {
+    memoProgramId = new PublicKey("MemoSq4gqABAXeb9unvyrRveWsyhkex96C4vX5Xf67");
+  }
+  return memoProgramId;
+}
+
+// Use a fallback public RPC if Helius key is missing or invalid to avoid 403
+export const RPC_URL = isHeliusValid 
   ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
   : "https://api.mainnet-beta.solana.com";
 
-if (HELIUS_API_KEY) {
-  console.log("Helius API Key detected:", HELIUS_API_KEY.substring(0, 4) + "..." + HELIUS_API_KEY.substring(HELIUS_API_KEY.length - 4));
+if (isHeliusValid) {
+  console.log("Helius API Key detected:", HELIUS_API_KEY.substring(0, 4) + "..." + HELIUS_API_KEY.substring(Math.max(0, HELIUS_API_KEY.length - 4)));
 } else {
-  console.warn("Helius API Key NOT detected. Falling back to public RPC.");
+  console.warn("Helius API Key NOT detected or invalid. Falling back to public RPC.");
 }
 
 export const connection = new Connection(RPC_URL, 'confirmed');
 
-export async function requestPayment(wallet: WalletContextState, amount: number = 0) {
+export async function requestPayment(wallet: WalletContextState, amount: number = 0, customConnection?: Connection) {
   if (!wallet.publicKey || !wallet.sendTransaction) {
     throw new Error("Wallet not connected");
   }
+
+  let activeConnection = customConnection || connection;
 
   try {
     const transaction = new Transaction();
 
     if (amount > 0) {
-      if (!TREASURY_ADDRESS || TREASURY_ADDRESS.includes("placeholder")) {
-        throw new Error("Treasury address not configured. Please set VITE_TREASURY_ADDRESS in environment variables to receive SOL payments.");
-      }
       transaction.add(
         SystemProgram.transfer({
           fromPubkey: wallet.publicKey,
-          toPubkey: new PublicKey(TREASURY_ADDRESS.trim()),
+          toPubkey: getTreasuryPublicKey(),
           lamports: Math.floor(amount * LAMPORTS_PER_SOL),
         })
       );
@@ -42,20 +85,37 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
       transaction.add(
         new TransactionInstruction({
           keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
-          programId: MEMO_PROGRAM_ID,
+          programId: getMemoProgramId(),
           data: Buffer.from("Rexy Audit Payment: Free Tier / Testing"),
         })
       );
     }
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash({
-      commitment: 'processed'
-    });
+    // Defensive blockhash fetch with fallback for 403 errors
+    let blockhash: string;
+    let lastValidBlockHeight: number;
+    
+    try {
+      const bh = await activeConnection.getLatestBlockhash({ commitment: 'processed' });
+      blockhash = bh.blockhash;
+      lastValidBlockHeight = bh.lastValidBlockHeight;
+    } catch (bhErr: any) {
+      const msg = bhErr.message || String(bhErr);
+      if (msg.includes("403") || msg.includes("Access forbidden")) {
+        console.warn("Primary RPC (Helius) returned 403. Falling back to public RPC for this transaction.");
+        activeConnection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
+        const bh = await activeConnection.getLatestBlockhash({ commitment: 'processed' });
+        blockhash = bh.blockhash;
+        lastValidBlockHeight = bh.lastValidBlockHeight;
+      } else {
+        throw bhErr;
+      }
+    }
     
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
 
-    const signature = await wallet.sendTransaction(transaction, connection, { 
+    const signature = await wallet.sendTransaction(transaction, activeConnection, { 
       preflightCommitment: 'processed',
       skipPreflight: true,
       maxRetries: 5
@@ -69,7 +129,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     const timeout = 300000; // 300 seconds polling
 
     while (Date.now() - start < timeout) {
-      const status = await connection.getSignatureStatus(signature);
+      const status = await activeConnection.getSignatureStatus(signature);
       if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
         if (status.value.err) {
           throw new Error(`Transaction failed: ${status.value.err.toString()}`);
@@ -83,7 +143,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     if (!confirmed) {
       // One last try with standard confirm
       try {
-        await connection.confirmTransaction({
+        await activeConnection.confirmTransaction({
           blockhash,
           lastValidBlockHeight,
           signature,
@@ -104,7 +164,11 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     }
 
     if (errorMessage.includes("insufficient funds") || errorMessage.includes("0x1")) {
-      throw new Error("Insufficient SOL for transaction fees. Please ensure you have at least 0.001 SOL in your Mainnet wallet for gas.");
+      throw new Error("Insufficient SOL for transaction fees. Please ensure you have at least 0.001 SOL in your wallet for gas.");
+    }
+
+    if (errorMessage.includes("ProgramAccountNotFound") || errorMessage.includes("Instruction #null")) {
+      throw new Error("Solana Program Error: One of the required programs (e.g., Memo or Compute Budget) was not found on this cluster. Please ensure your wallet is connected to the correct network (Mainnet/Devnet).");
     }
 
     if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("api key") || errorMessage.includes("403")) {
@@ -118,10 +182,12 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
  * Records an audit hash and score on the Solana blockchain using the Memo Program.
  * This provides an immutable, verifiable proof of the audit result.
  */
-export async function recordAuditOnChain(wallet: WalletContextState, auditHash: string, score: number) {
+export async function recordAuditOnChain(wallet: WalletContextState, auditHash: string, score: number, customConnection?: Connection) {
   if (!wallet.publicKey || !wallet.sendTransaction) {
     throw new Error("Wallet not connected");
   }
+
+  let activeConnection = customConnection || connection;
 
   try {
     const memoData = JSON.stringify({
@@ -137,16 +203,36 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
       ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 500000 }),
       new TransactionInstruction({
         keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
-        programId: MEMO_PROGRAM_ID,
+        programId: getMemoProgramId(),
         data: Buffer.from(memoData),
       })
     );
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('processed');
+    // Defensive blockhash fetch with fallback for 403 errors
+    let blockhash: string;
+    let lastValidBlockHeight: number;
+    
+    try {
+      const bh = await activeConnection.getLatestBlockhash('processed');
+      blockhash = bh.blockhash;
+      lastValidBlockHeight = bh.lastValidBlockHeight;
+    } catch (bhErr: any) {
+      const msg = bhErr.message || String(bhErr);
+      if (msg.includes("403") || msg.includes("Access forbidden")) {
+        console.warn("Primary RPC (Helius) returned 403 for proof recording. Falling back to public RPC.");
+        activeConnection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
+        const bh = await activeConnection.getLatestBlockhash('processed');
+        blockhash = bh.blockhash;
+        lastValidBlockHeight = bh.lastValidBlockHeight;
+      } else {
+        throw bhErr;
+      }
+    }
+
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await wallet.sendTransaction(transaction, activeConnection, {
       preflightCommitment: 'processed',
       skipPreflight: true,
       maxRetries: 5
@@ -156,7 +242,7 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
     let confirmed = false;
     const start = Date.now();
     while (Date.now() - start < 300000) {
-      const status = await connection.getSignatureStatus(signature);
+      const status = await activeConnection.getSignatureStatus(signature);
       if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
         confirmed = true;
         break;
@@ -165,7 +251,7 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
     }
 
     if (!confirmed) {
-      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+      await activeConnection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
     }
     
     return signature;
@@ -180,11 +266,12 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
  * Mints a compressed NFT (cNFT) as an Audit Certificate.
  * Uses Helius Mint API for simplicity and efficiency.
  */
-export async function mintAuditCertificate(wallet: WalletContextState, auditData: { id: string, score: number, name: string }) {
+export async function mintAuditCertificate(wallet: WalletContextState, auditData: { id: string, score: number, name: string }, customConnection?: Connection) {
   if (!wallet.publicKey || !wallet.sendTransaction) {
     throw new Error("Wallet not connected");
   }
 
+  let activeConnection = customConnection || connection;
   const CERTIFICATE_FEE = 0.00001; // Minimal fee for Mainnet testing
 
   try {
@@ -197,13 +284,10 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     );
 
     if (CERTIFICATE_FEE > 0) {
-      if (!TREASURY_ADDRESS || TREASURY_ADDRESS.includes("placeholder")) {
-        throw new Error("Treasury address not configured. Please set VITE_TREASURY_ADDRESS.");
-      }
       transaction.add(
         SystemProgram.transfer({
           fromPubkey: wallet.publicKey,
-          toPubkey: new PublicKey(TREASURY_ADDRESS.trim()),
+          toPubkey: getTreasuryPublicKey(),
           lamports: Math.floor(CERTIFICATE_FEE * LAMPORTS_PER_SOL),
         })
       );
@@ -213,16 +297,36 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     transaction.add(
       new TransactionInstruction({
         keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
-        programId: MEMO_PROGRAM_ID,
+        programId: getMemoProgramId(),
         data: Buffer.from(`Rexy Certificate Mint: ${auditData.id}`),
       })
     );
 
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('processed');
+    // Defensive blockhash fetch with fallback for 403 errors
+    let blockhash: string;
+    let lastValidBlockHeight: number;
+    
+    try {
+      const bh = await activeConnection.getLatestBlockhash('processed');
+      blockhash = bh.blockhash;
+      lastValidBlockHeight = bh.lastValidBlockHeight;
+    } catch (bhErr: any) {
+      const msg = bhErr.message || String(bhErr);
+      if (msg.includes("403") || msg.includes("Access forbidden")) {
+        console.warn("Primary RPC (Helius) returned 403 for minting. Falling back to public RPC.");
+        activeConnection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
+        const bh = await activeConnection.getLatestBlockhash('processed');
+        blockhash = bh.blockhash;
+        lastValidBlockHeight = bh.lastValidBlockHeight;
+      } else {
+        throw bhErr;
+      }
+    }
+
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = wallet.publicKey;
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await wallet.sendTransaction(transaction, activeConnection, {
       preflightCommitment: 'processed',
       skipPreflight: true,
       maxRetries: 5
@@ -232,7 +336,7 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     let confirmed = false;
     const start = Date.now();
     while (Date.now() - start < 300000) {
-      const status = await connection.getSignatureStatus(signature);
+      const status = await activeConnection.getSignatureStatus(signature);
       if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
         confirmed = true;
         break;
@@ -241,7 +345,7 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     }
 
     if (!confirmed) {
-      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+      await activeConnection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
     }
     
     // Step 2: Simulate cNFT Minting (In production, this would be a backend call to Helius/Underdog)

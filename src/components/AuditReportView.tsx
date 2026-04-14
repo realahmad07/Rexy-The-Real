@@ -290,8 +290,13 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const [certificateMint, setCertificateMint] = useState<string | null>(report.certificateMint || null);
   const [copied, setCopied] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
-
   const [localSimulation, setLocalSimulation] = useState(isSimulation || false);
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
 
   const getRiskLevel = (score: number) => {
     if (score < 50) return { label: 'CRITICAL RISK', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' };
@@ -303,7 +308,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
 
   const handleRecordOnChain = async () => {
     if (!localSimulation && (!wallet.publicKey || !wallet.sendTransaction)) {
-      alert("Please connect your wallet to record proof on-chain.");
+      showNotification("Please connect your wallet to record proof on-chain.", "error");
       return;
     }
     setIsRecordingOnChain(true);
@@ -314,15 +319,15 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
         signature = "sim_proof_" + Math.random().toString(36).substring(7);
       } else {
         const { recordAuditOnChain } = await import('../services/solanaService');
-        signature = await recordAuditOnChain(wallet, report.codeHash || 'unknown', report.score);
+        signature = await recordAuditOnChain(wallet, report.codeHash || 'unknown', report.score, connection);
       }
       setOnChainProofSig(signature);
       if (report.id) {
         await updateDoc(doc(db, 'audits', report.id), { onChainProof: signature });
       }
-      alert(isSimulation ? "Simulated audit proof recorded successfully!" : "Audit proof recorded on Solana blockchain successfully!");
+      showNotification(isSimulation ? "Simulated audit proof recorded successfully!" : "Audit proof recorded on Solana blockchain successfully!", "success");
     } catch (err: any) {
-      alert(err.message || "Failed to record proof on-chain.");
+      showNotification(err.message || "Failed to record proof on-chain.", "error");
     } finally {
       setIsRecordingOnChain(false);
     }
@@ -330,7 +335,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
 
   const handleMint = async () => {
     if (!localSimulation && !wallet.publicKey) {
-      alert("Please connect your wallet to mint a certificate.");
+      showNotification("Please connect your wallet to mint a certificate.", "error");
       return;
     }
     setIsMinting(true);
@@ -345,15 +350,15 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
           id: report.id || report.codeHash || 'unknown',
           score: report.score,
           name: report.contractName || 'Unnamed Contract'
-        });
+        }, connection);
       }
       setCertificateMint(result.mint);
       if (report.id) {
         await updateDoc(doc(db, 'audits', report.id), { certificateMint: result.mint });
       }
-      alert(isSimulation ? "Simulated cNFT Certificate minted successfully!" : "cNFT Audit Certificate minted successfully!");
+      showNotification(isSimulation ? "Simulated cNFT Certificate minted successfully!" : "cNFT Audit Certificate minted successfully!", "success");
     } catch (err: any) {
-      alert(err.message || "Failed to mint certificate.");
+      showNotification(err.message || "Failed to mint certificate.", "error");
     } finally {
       setIsMinting(false);
     }
@@ -364,9 +369,10 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
     try {
       await navigator.clipboard.writeText(blinkUrl);
       setCopied(true);
+      showNotification("Blink share link copied to clipboard!", "success");
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      alert("Failed to copy. URL: " + blinkUrl);
+      showNotification("Failed to copy share link.", "error");
     }
   };
 
@@ -510,15 +516,16 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
       pdf.text('SECURE', pageWidth - margin - 20, sigY + 4, { align: 'center' });
 
       pdf.save(`Rexy_Audit_Report_${report.contractName || 'Contract'}.pdf`);
+      showNotification("Audit report exported as PDF successfully!", "success");
     } catch (error) {
       console.error("PDF Export Error:", error);
-      alert("Failed to export PDF. Please try again.");
+      showNotification("Failed to export PDF. Please try again.", "error");
     }
   };
 
   const handleCopyFixedCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    alert("Fixed code copied to clipboard!");
+    showNotification("Fixed code copied to clipboard!", "success");
   };
 
   const SectionTitle: React.FC<{ title: string; icon: any; subtitle?: string }> = ({ title, icon: Icon, subtitle }) => (
@@ -721,7 +728,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
               <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Signature</span>
-                  <button onClick={() => { navigator.clipboard.writeText(onChainProofSig); alert("Copied!"); }} className="text-rexy-primary hover:text-white transition-colors">
+                  <button onClick={() => { navigator.clipboard.writeText(onChainProofSig); showNotification("Signature copied!", "success"); }} className="text-rexy-primary hover:text-white transition-colors">
                     <Copy className="w-3 h-3" />
                   </button>
                 </div>
@@ -778,6 +785,30 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
         </div>
         <p className="text-[9px] text-slate-400 uppercase tracking-widest mt-4">Automated Smart Contract Audit Engine v2.4.0</p>
       </div>
+
+      {/* NOTIFICATION TOAST */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] min-w-[300px]"
+          >
+            <div className={cn(
+              "px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-xl",
+              notification.type === 'success' ? "bg-emerald-500/90 border-emerald-400 text-white" :
+              notification.type === 'error' ? "bg-red-500/90 border-red-400 text-white" :
+              "bg-slate-900/90 border-slate-700 text-white"
+            )}>
+              {notification.type === 'success' && <CheckCircle className="w-5 h-5" />}
+              {notification.type === 'error' && <AlertTriangle className="w-5 h-5" />}
+              {notification.type === 'info' && <Info className="w-5 h-5" />}
+              <p className="text-xs font-black uppercase tracking-widest">{notification.message}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

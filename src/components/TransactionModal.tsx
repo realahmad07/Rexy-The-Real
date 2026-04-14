@@ -4,6 +4,7 @@ import { X, Wallet, ArrowRight, Loader2, CheckCircle2, ShieldCheck, ExternalLink
 import { cn } from '../lib/utils';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { getTreasuryPublicKey } from '../services/solanaService';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
     try {
       // Real Transaction Integration
-      const treasury = new PublicKey("94XERPmgthDeS8gkAZDJ7sqKteEATJjvTgXB17BqovDG"); 
+      const treasury = getTreasuryPublicKey(); 
       
       const transaction = new Transaction().add(
         SystemProgram.transfer({
