@@ -67,6 +67,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     throw new Error("Wallet not connected");
   }
 
+  const userPublicKey = new PublicKey(wallet.publicKey.toString());
   let activeConnection = customConnection || connection;
 
   try {
@@ -75,7 +76,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     if (amount > 0) {
       transaction.add(
         SystemProgram.transfer({
-          fromPubkey: wallet.publicKey,
+          fromPubkey: userPublicKey,
           toPubkey: getTreasuryPublicKey(),
           lamports: Math.floor(amount * LAMPORTS_PER_SOL),
         })
@@ -84,7 +85,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
       // For 0 SOL "payments", use a Memo to ensure a real transaction is still performed
       transaction.add(
         new TransactionInstruction({
-          keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
+          keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: true }],
           programId: getMemoProgramId(),
           data: Buffer.from("Rexy Audit Payment: Free Tier / Testing"),
         })
@@ -187,6 +188,7 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
     throw new Error("Wallet not connected");
   }
 
+  const userPublicKey = new PublicKey(wallet.publicKey.toString());
   let activeConnection = customConnection || connection;
 
   try {
@@ -202,7 +204,7 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
       ComputeBudgetProgram.setComputeUnitLimit({ units: 10000 }),
       ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 500000 }),
       new TransactionInstruction({
-        keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
+        keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: true }],
         programId: getMemoProgramId(),
         data: Buffer.from(memoData),
       })
@@ -271,11 +273,12 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     throw new Error("Wallet not connected");
   }
 
+  const userPublicKey = new PublicKey(wallet.publicKey.toString());
   let activeConnection = customConnection || connection;
   const CERTIFICATE_FEE = 0.00001; // Minimal fee for Mainnet testing
 
   try {
-    console.log(`Minting cNFT Certificate for audit ${auditData.id} to ${wallet.publicKey.toBase58()}`);
+    console.log(`Minting cNFT Certificate for audit ${auditData.id} to ${userPublicKey.toBase58()}`);
     
     // Step 1: Process Payment for the Certificate
     const transaction = new Transaction().add(
@@ -286,7 +289,7 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     if (CERTIFICATE_FEE > 0) {
       transaction.add(
         SystemProgram.transfer({
-          fromPubkey: wallet.publicKey,
+          fromPubkey: userPublicKey,
           toPubkey: getTreasuryPublicKey(),
           lamports: Math.floor(CERTIFICATE_FEE * LAMPORTS_PER_SOL),
         })
@@ -296,7 +299,7 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     // Always add a memo for proof of action
     transaction.add(
       new TransactionInstruction({
-        keys: [{ pubkey: wallet.publicKey, isSigner: true, isWritable: true }],
+        keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: true }],
         programId: getMemoProgramId(),
         data: Buffer.from(`Rexy Certificate Mint: ${auditData.id}`),
       })
