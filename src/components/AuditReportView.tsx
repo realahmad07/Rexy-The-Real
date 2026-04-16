@@ -17,6 +17,8 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
 
+import { getClusterParam } from '../services/solanaService';
+
 interface AuditReportViewProps {
   report: AuditReport;
   onApplyFix: () => void;
@@ -398,25 +400,25 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
           </h1>
 
           <div className="flex flex-wrap items-center gap-8 pt-4">
-            <div className="space-y-1">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Hash</span>
-              <div className="flex items-center gap-2 text-xs font-mono text-slate-600">
-                <Hash className="w-3 h-3 text-rexy-primary" />
-                {onChainProofSig ? (
-                  <a 
-                    href={`https://solscan.io/tx/${onChainProofSig}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-rexy-primary hover:underline flex items-center gap-1"
-                  >
-                    {report.codeHash?.substring(0, 24)}...
-                    <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
-                ) : (
-                  <span>{report.codeHash?.substring(0, 24)}...</span>
-                )}
-              </div>
+          <div className="space-y-1">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Hash</span>
+            <div className="flex items-center gap-2 text-xs font-mono text-slate-600">
+              <Hash className="w-3 h-3 text-rexy-primary" />
+              {onChainProofSig ? (
+                <a 
+                  href={`https://solscan.io/tx/${onChainProofSig}${getClusterParam()}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-rexy-primary hover:underline flex items-center gap-1"
+                >
+                  {report.codeHash?.substring(0, 24)}...
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              ) : (
+                <span>{report.codeHash?.substring(0, 24)}...</span>
+              )}
             </div>
+          </div>
             <div className="space-y-1">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Timestamp</span>
               <div className="flex items-center gap-2 text-xs font-mono text-slate-600">
@@ -462,7 +464,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
                 <span className="text-xs font-black uppercase tracking-widest">Certificate Minted</span>
               </div>
               <a 
-                href={`https://solscan.io/${certificateSignature ? `tx/${certificateSignature}` : `token/${certificateMint}`}`}
+                href={`https://solscan.io/${certificateSignature ? `tx/${certificateSignature}` : `token/${certificateMint}`}${getClusterParam()}`}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2 text-[9px] font-bold text-rexy-primary hover:underline"

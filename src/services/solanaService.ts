@@ -75,10 +75,9 @@ export function getTreasuryPublicKey(): PublicKey {
 let memoProgramId: PublicKey | null = null;
 function getMemoProgramId(): PublicKey {
   if (!memoProgramId) {
-    // Using Memo v1 Program ID (Memo1UhkJR6FEZeavB7x45EnYx66K9f6Jt44E4wY9FE) 
-    // It's more universally recognized and avoids potential base58 parsing issues
-    // with certain library versions.
-    memoProgramId = toPublicKey("Memo1UhkJR6FEZeavB7x45EnYx66K9f6Jt44E4wY9FE", "Memo Program ID");
+    // Standard Memo Program v2 ID (MemoSq4gqABAXeb9unvyrRveWsyhkex96C4vX5Xf67)
+    // Manually instantiated to ensure zero hidden characters or parsing issues.
+    memoProgramId = new PublicKey("MemoSq4gqABAXeb9unvyrRveWsyhkex96C4vX5Xf67");
   }
   return memoProgramId;
 }
@@ -92,6 +91,15 @@ if (isHeliusValid) {
   console.log("Helius API Key detected:", HELIUS_API_KEY.substring(0, 4) + "..." + HELIUS_API_KEY.substring(Math.max(0, HELIUS_API_KEY.length - 4)));
 } else {
   console.warn("Helius API Key NOT detected or invalid. Falling back to public RPC.");
+}
+
+/**
+ * Helper to get the cluster name for Solscan links based on the RPC URL.
+ */
+export function getClusterParam(): string {
+  if (RPC_URL.includes("devnet")) return "?cluster=devnet";
+  if (RPC_URL.includes("testnet")) return "?cluster=testnet";
+  return "";
 }
 
 export const connection = new Connection(RPC_URL, 'confirmed');
@@ -131,7 +139,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     let lastValidBlockHeight: number;
     
     try {
-      const bh = await activeConnection.getLatestBlockhash({ commitment: 'processed' });
+      const bh = await activeConnection.getLatestBlockhash({ commitment: 'confirmed' });
       blockhash = bh.blockhash;
       lastValidBlockHeight = bh.lastValidBlockHeight;
     } catch (bhErr: any) {
@@ -139,7 +147,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
       if (msg.includes("403") || msg.includes("Access forbidden")) {
         console.warn("Primary RPC (Helius) returned 403. Falling back to public RPC for this transaction.");
         activeConnection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
-        const bh = await activeConnection.getLatestBlockhash({ commitment: 'processed' });
+        const bh = await activeConnection.getLatestBlockhash({ commitment: 'confirmed' });
         blockhash = bh.blockhash;
         lastValidBlockHeight = bh.lastValidBlockHeight;
       } else {
@@ -249,7 +257,7 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
     let lastValidBlockHeight: number;
     
     try {
-      const bh = await activeConnection.getLatestBlockhash('processed');
+      const bh = await activeConnection.getLatestBlockhash('confirmed');
       blockhash = bh.blockhash;
       lastValidBlockHeight = bh.lastValidBlockHeight;
     } catch (bhErr: any) {
@@ -257,7 +265,7 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
       if (msg.includes("403") || msg.includes("Access forbidden")) {
         console.warn("Primary RPC (Helius) returned 403 for proof recording. Falling back to public RPC.");
         activeConnection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
-        const bh = await activeConnection.getLatestBlockhash('processed');
+        const bh = await activeConnection.getLatestBlockhash('confirmed');
         blockhash = bh.blockhash;
         lastValidBlockHeight = bh.lastValidBlockHeight;
       } else {
@@ -344,7 +352,7 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     let lastValidBlockHeight: number;
     
     try {
-      const bh = await activeConnection.getLatestBlockhash('processed');
+      const bh = await activeConnection.getLatestBlockhash('confirmed');
       blockhash = bh.blockhash;
       lastValidBlockHeight = bh.lastValidBlockHeight;
     } catch (bhErr: any) {
@@ -352,7 +360,7 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
       if (msg.includes("403") || msg.includes("Access forbidden")) {
         console.warn("Primary RPC (Helius) returned 403 for minting. Falling back to public RPC.");
         activeConnection = new Connection("https://api.mainnet-beta.solana.com", 'confirmed');
-        const bh = await activeConnection.getLatestBlockhash('processed');
+        const bh = await activeConnection.getLatestBlockhash('confirmed');
         blockhash = bh.blockhash;
         lastValidBlockHeight = bh.lastValidBlockHeight;
       } else {

@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { generateAuditBlink } from "./src/services/blinkService.ts";
 
@@ -58,16 +59,34 @@ async function startServer() {
   });
 
   // Handle production vs development
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = process.env.NODE_ENV === "production" || process.env.VITE_USER_NODE_ENV === "production";
   const distPath = path.resolve(process.cwd(), "dist");
   
+  console.log(`Checking architecture: ${isProduction ? 'Production' : 'Development'}`);
+  console.log(`Current working directory: ${process.cwd()}`);
+  console.log(`Expected dist path: ${distPath}`);
+
   if (isProduction) {
-    app.use(express.static(distPath));
-    
-    // In Express 5, *all captures everything as a parameter named "all"
-    app.get("*all", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    if (fs.existsSync(distPath)) {
+      console.log(`✅ Dist directory found at ${distPath}`);
+      app.use(express.static(distPath));
+      
+      // In Express 5, *all captures everything as a parameter named "all"
+      app.get("*all", (req, res) => {
+        const indexPath = path.join(distPath, "index.html");
+        if (fs.existsSync(indexPath)) {
+          res.sendFile(indexPath);
+        } else {
+          console.error(`❌ index.html not found at ${indexPath}`);
+          res.status(404).send("Application not initialized (index.html missing)");
+        }
+      });
+    } else {
+      console.error(`❌ dist directory NOT found at ${distPath}. Build likely failed or directory is in wrong place.`);
+      app.get("*", (req, res) => {
+        res.status(500).send("Server configured for production but build artifacts (dist/) are missing.");
+      });
+    }
   } else {
     // Vite middleware for development
     try {
