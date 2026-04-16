@@ -5,9 +5,14 @@ import { AuditReport } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export async function performAudit(contractCode: string): Promise<AuditReport | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "" || apiKey.includes("TODO")) {
+    throw new Error("GEMINI_API_KEY is not configured or invalid. Please set a valid API key in your environment variables.");
+  }
+
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: `Analyze the following smart contract code:\n\n${contractCode}`,
       config: {
         systemInstruction: `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
