@@ -16,18 +16,18 @@ export async function performAudit(contractCode: string): Promise<AuditReport | 
   const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   
   if (!apiKey || apiKey === "" || apiKey === "undefined" || apiKey.includes("TODO")) {
-    console.error("GEMINI_API_KEY is missing. Environment check:", { 
-      hasProcessEnv: !!process.env.GEMINI_API_KEY,
-      hasImportMetaEnv: !!(import.meta as any).env?.VITE_GEMINI_API_KEY 
-    });
-    throw new Error("GEMINI_API_KEY is not configured. Please go to the 'Settings' menu in AI Studio and ensure your Gemini API key is set. If running locally, add it to your .env file.");
+    console.error("GEMINI_API_KEY is missing.");
+    throw new Error("GEMINI_API_KEY is not configured. Please ensure your API key is set in Netlify/Environment variables.");
   }
+
+  // Debug log (masked) to verify key presence in production
+  console.log(`Using API Key starting with: ${apiKey.substring(0, 6)}...`);
 
   const ai = getAi(apiKey);
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model: "gemini-1.5-flash",
       contents: `Analyze the following smart contract code:\n\n${contractCode}`,
       config: {
         systemInstruction: `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
