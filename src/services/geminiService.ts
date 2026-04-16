@@ -2,17 +2,32 @@ import { Buffer } from "buffer";
 import { GoogleGenAI, Type } from "@google/genai";
 import { AuditReport } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAi(apiKey: string) {
+  if (!aiInstance) {
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export async function performAudit(contractCode: string): Promise<AuditReport | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === "" || apiKey.includes("TODO")) {
-    throw new Error("GEMINI_API_KEY is not configured or invalid. Please set a valid API key in your environment variables.");
+  // Try to get API key from import.meta.env (Vite standard) or process.env (defined by Vite/Server)
+  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  
+  if (!apiKey || apiKey === "" || apiKey === "undefined" || apiKey.includes("TODO")) {
+    console.error("GEMINI_API_KEY is missing. Environment check:", { 
+      hasProcessEnv: !!process.env.GEMINI_API_KEY,
+      hasImportMetaEnv: !!(import.meta as any).env?.VITE_GEMINI_API_KEY 
+    });
+    throw new Error("GEMINI_API_KEY is not configured. Please go to the 'Settings' menu in AI Studio and ensure your Gemini API key is set. If running locally, add it to your .env file.");
   }
+
+  const ai = getAi(apiKey);
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-latest",
       contents: `Analyze the following smart contract code:\n\n${contractCode}`,
       config: {
         systemInstruction: `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
