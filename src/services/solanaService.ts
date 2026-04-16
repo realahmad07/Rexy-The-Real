@@ -32,23 +32,23 @@ function toPublicKey(input: any, label: string = "Address"): PublicKey {
     throw new Error(`${label} is missing or empty. Please ensure your wallet is connected or configuration is set.`);
   }
   
+  // If it's already a PublicKey-like object, return it directly.
+  // This avoids "Invalid public key input" errors caused by version mismatches 
+  // between the wallet's web3.js and the app's web3.js.
+  if (typeof input.toBase58 === 'function' && typeof input.toBytes === 'function') {
+    return input as PublicKey;
+  }
+
   try {
-    // Force conversion to base58 string first, then to a NEW PublicKey instance.
-    // This resolves issues where the input might be a PublicKey from a different
-    // version of the library than the one we're using in this module.
     let base58 = "";
     if (typeof input === 'string') {
-      base58 = input.trim();
-    } else if (input && typeof input.toBase58 === 'function') {
-      base58 = input.toBase58();
-    } else if (input && typeof input.toString === 'function') {
-      base58 = input.toString();
+      // Remove any non-base58 characters (like zero-width spaces or quotes)
+      base58 = input.trim().replace(/[^1-9A-HJ-NP-Za-km-z]/g, '');
     } else {
-      base58 = String(input);
+      base58 = String(input).trim().replace(/[^1-9A-HJ-NP-Za-km-z]/g, '');
     }
     
-    // Final check for placeholders or obviously invalid strings
-    if (!base58 || base58.includes("placeholder") || base58.length < 32) {
+    if (!base58 || base58.length < 32) {
       throw new Error(`Invalid format for ${label}: "${base58}"`);
     }
 
@@ -56,8 +56,6 @@ function toPublicKey(input: any, label: string = "Address"): PublicKey {
   } catch (error: any) {
     const innerError = error instanceof Error ? error.message : String(error);
     console.error(`PublicKey conversion failed [${label}]:`, input, innerError);
-    // If we're here, it's a real failure. Wrap the underlying web3.js error
-    // to give the user more context.
     throw new Error(`Invalid ${label}: ${innerError}. Please verify the key is a valid Solana public key.`);
   }
 }
@@ -75,9 +73,9 @@ export function getTreasuryPublicKey(): PublicKey {
 let memoProgramId: PublicKey | null = null;
 function getMemoProgramId(): PublicKey {
   if (!memoProgramId) {
-    // Standard Memo Program v2 ID (MemoSq4gqABAXeb9unvyrRveWsyhkex96C4vX5Xf67)
-    // Manually instantiated to ensure zero hidden characters or parsing issues.
-    memoProgramId = new PublicKey("MemoSq4gqABAXeb9unvyrRveWsyhkex96C4vX5Xf67");
+    // Standard Memo Program v2 ID. Cleaned of any potential hidden characters.
+    const ID = "MemoSq4gqABAXeb9unvyrRveWsyhkex96C4vX5Xf67";
+    memoProgramId = toPublicKey(ID, "Memo Program ID");
   }
   return memoProgramId;
 }
@@ -243,8 +241,8 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
     });
 
     const transaction = new Transaction().add(
-      ComputeBudgetProgram.setComputeUnitLimit({ units: 10000 }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 500000 }),
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 15000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1000000 }),
       new TransactionInstruction({
         keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: true }],
         programId: getMemoProgramId(),
