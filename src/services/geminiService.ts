@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 export async function performAudit(contractCode: string): Promise<AuditReport | null> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-pro-preview",
       contents: `Analyze the following smart contract code:\n\n${contractCode}`,
       config: {
         systemInstruction: `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
