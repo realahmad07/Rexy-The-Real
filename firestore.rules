@@ -103,7 +103,9 @@ service cloud.firestore {
                       (isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin())) ||
                       (!isAuthenticated() && request.resource.data.userId is string && request.resource.data.userId.size() >= 32 && request.resource.data.userId.size() <= 44)
                     );
-      allow update: if isAdmin();
+      allow update: if isAdmin() || 
+                    (isAuthenticated() && resource.data.userId == request.auth.uid) ||
+                    (!isAuthenticated() && resource.data.userId.size() >= 32 && resource.data.userId.size() <= 44);
       allow delete: if isAdmin();
     }
 

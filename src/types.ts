@@ -27,6 +27,7 @@ export interface AuditReport {
   isCNFT?: boolean;
   onChainProof?: string;
   certificateMint?: string;
+  certificateSignature?: string;
 }
 
 export interface AppState {

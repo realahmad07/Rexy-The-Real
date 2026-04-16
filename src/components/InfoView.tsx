@@ -159,10 +159,10 @@ const InfoView: React.FC = () => {
             <div className="p-6 bg-rexy-primary/5 rounded-2xl border border-rexy-primary/20">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-bold text-slate-900">cNFT Audit Certificate</h4>
-                <span className="px-2 py-1 bg-rexy-primary/10 text-rexy-primary text-[10px] font-black uppercase rounded-lg">0.05 SOL</span>
+                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase rounded-lg">Free</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Mint a permanent, verifiable "Verified" status badge as a compressed NFT. This certificate serves as an immutable trust signal for your users and investors.
+                Mint a permanent, verifiable "Verified" status badge as a compressed NFT. You only pay the standard Solana network gas fee for the minting transaction.
               </p>
             </div>
 

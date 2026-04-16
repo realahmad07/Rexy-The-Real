@@ -189,6 +189,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [certificateMint, setCertificateMint] = useState<string | null>(report.certificateMint || null);
+  const [certificateSignature, setCertificateSignature] = useState<string | null>(report.certificateSignature || null);
   const [copied, setCopied] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
   const [localSimulation, setLocalSimulation] = useState(isSimulation || false);
@@ -254,8 +255,12 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
         }, connection);
       }
       setCertificateMint(result.mint);
+      setCertificateSignature(result.signature || null);
       if (report.id) {
-        await updateDoc(doc(db, 'audits', report.id), { certificateMint: result.mint });
+        await updateDoc(doc(db, 'audits', report.id), { 
+          certificateMint: result.mint,
+          certificateSignature: result.signature || null
+        });
       }
       showNotification(isSimulation ? "Simulated cNFT Certificate minted successfully!" : "cNFT Audit Certificate minted successfully!", "success");
     } catch (err: any) {
@@ -397,7 +402,19 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Hash</span>
               <div className="flex items-center gap-2 text-xs font-mono text-slate-600">
                 <Hash className="w-3 h-3 text-rexy-primary" />
-                {report.codeHash?.substring(0, 24)}...
+                {onChainProofSig ? (
+                  <a 
+                    href={`https://solscan.io/tx/${onChainProofSig}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-rexy-primary hover:underline flex items-center gap-1"
+                  >
+                    {report.codeHash?.substring(0, 24)}...
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                ) : (
+                  <span>{report.codeHash?.substring(0, 24)}...</span>
+                )}
               </div>
             </div>
             <div className="space-y-1">
@@ -437,16 +454,36 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
           <Share2 className="w-5 h-5 text-slate-400 group-hover:text-rexy-primary transition-colors" />
           <span className="text-xs font-black uppercase tracking-widest text-slate-600">{copied ? "Link Copied" : "Share via Blink"}</span>
         </button>
-        <button 
-          onClick={handleMint}
-          disabled={isMinting || !!certificateMint}
-          className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group disabled:opacity-50"
-        >
-          {isMinting ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <Award className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />}
-          <span className="text-xs font-black uppercase tracking-widest text-slate-600">
-            {certificateMint ? "Certificate Minted" : "Mint cNFT Certificate"}
-          </span>
-        </button>
+        <div className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group">
+          {certificateMint ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-4 text-emerald-500">
+                <BadgeCheck className="w-5 h-5" />
+                <span className="text-xs font-black uppercase tracking-widest">Certificate Minted</span>
+              </div>
+              <a 
+                href={`https://solscan.io/${certificateSignature ? `tx/${certificateSignature}` : `token/${certificateMint}`}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 text-[9px] font-bold text-rexy-primary hover:underline"
+              >
+                <span>View on Solscan</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+          ) : (
+            <button 
+              onClick={handleMint}
+              disabled={isMinting}
+              className="flex items-center gap-4 group disabled:opacity-50"
+            >
+              {isMinting ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <Award className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />}
+              <span className="text-xs font-black uppercase tracking-widest text-slate-600">
+                Mint cNFT Certificate
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* EXECUTIVE SUMMARY */}

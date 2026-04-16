@@ -6,7 +6,13 @@ import { Buffer } from 'buffer';
 const getEnvVar = (name: string): string => {
   try {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      return (import.meta.env[name] || "").trim();
+      const val = import.meta.env[name];
+      if (val) return val.trim();
+    }
+    // Fallback for process.env if Vite defines it
+    if (typeof process !== 'undefined' && process.env) {
+      const val = (process.env as any)[name];
+      if (val) return val.trim();
     }
     return "";
   } catch (e) {
@@ -18,33 +24,61 @@ const HELIUS_API_KEY = getEnvVar('VITE_HELIUS_API_KEY');
 const isHeliusValid = HELIUS_API_KEY && !HELIUS_API_KEY.includes('placeholder') && HELIUS_API_KEY.length > 10;
 
 /**
+ * Securely converts various formats to a valid Solana PublicKey.
+ * Prevents "Invalid public key input" errors by providing clear diagnostics.
+ */
+function toPublicKey(input: any, label: string = "Address"): PublicKey {
+  if (!input) {
+    throw new Error(`${label} is missing or empty. Please ensure your wallet is connected or configuration is set.`);
+  }
+  
+  try {
+    // Force conversion to base58 string first, then to a NEW PublicKey instance.
+    // This resolves issues where the input might be a PublicKey from a different
+    // version of the library than the one we're using in this module.
+    let base58 = "";
+    if (typeof input === 'string') {
+      base58 = input.trim();
+    } else if (input && typeof input.toBase58 === 'function') {
+      base58 = input.toBase58();
+    } else if (input && typeof input.toString === 'function') {
+      base58 = input.toString();
+    } else {
+      base58 = String(input);
+    }
+    
+    // Final check for placeholders or obviously invalid strings
+    if (!base58 || base58.includes("placeholder") || base58.length < 32) {
+      throw new Error(`Invalid format for ${label}: "${base58}"`);
+    }
+
+    return new PublicKey(base58);
+  } catch (error: any) {
+    const innerError = error instanceof Error ? error.message : String(error);
+    console.error(`PublicKey conversion failed [${label}]:`, input, innerError);
+    // If we're here, it's a real failure. Wrap the underlying web3.js error
+    // to give the user more context.
+    throw new Error(`Invalid ${label}: ${innerError}. Please verify the key is a valid Solana public key.`);
+  }
+}
+
+/**
  * Safely converts the treasury address string to a PublicKey.
  * Throws a descriptive error if the address is missing or invalid.
  */
 export function getTreasuryPublicKey(): PublicKey {
-  let address = getEnvVar('VITE_TREASURY_ADDRESS');
-  
-  // Remove potential quotes if user entered them in settings
-  address = address.replace(/['"]/g, '');
-
-  if (!address || address.includes("placeholder") || address.length < 32) {
-    console.warn("Treasury address check failed:", { address, length: address?.length });
-    throw new Error("Treasury address not configured. Please set a valid VITE_TREASURY_ADDRESS in your environment variables.");
-  }
-  try {
-    console.log("Attempting to create PublicKey with:", address);
-    return new PublicKey(address);
-  } catch (e) {
-    console.error("PublicKey creation failed for address:", address, e);
-    throw new Error(`Invalid Treasury Address: "${address}". Please ensure VITE_TREASURY_ADDRESS is a valid Solana base58 public key.`);
-  }
+  const address = getEnvVar('VITE_TREASURY_ADDRESS').replace(/['"]/g, '');
+  return toPublicKey(address, "Treasury Address");
 }
 
 // Lazy-load Memo Program ID to avoid top-level PublicKey creation issues
 let memoProgramId: PublicKey | null = null;
 function getMemoProgramId(): PublicKey {
   if (!memoProgramId) {
-    memoProgramId = new PublicKey("MemoSq4gqABAXeb9unvyrRveWsyhkex96C4vX5Xf67");
+    // Using Memo v1 Program ID (Memo1UhkJR6FEZeavB7x45EnYx66K9f6Jt44E4wY9FE) 
+    // It's more universally recognized and avoids potential base58 parsing issues
+    // with certain library versions.
+    memoProgramId = toPublicKey("Memo1UhkJR6FEZeavB7x45EnYx66K9f6Jt44E4wY9FE", "Memo Program ID");
   }
   return memoProgramId;
 }
@@ -67,7 +101,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     throw new Error("Wallet not connected");
   }
 
-  const userPublicKey = new PublicKey(wallet.publicKey.toString());
+  const userPublicKey = toPublicKey(wallet.publicKey, "User Wallet");
   let activeConnection = customConnection || connection;
 
   try {
@@ -114,7 +148,7 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     }
     
     transaction.recentBlockhash = blockhash;
-    transaction.feePayer = wallet.publicKey;
+    transaction.feePayer = wallet.publicKey || userPublicKey;
 
     const signature = await wallet.sendTransaction(transaction, activeConnection, { 
       preflightCommitment: 'processed',
@@ -188,7 +222,7 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
     throw new Error("Wallet not connected");
   }
 
-  const userPublicKey = new PublicKey(wallet.publicKey.toString());
+  const userPublicKey = toPublicKey(wallet.publicKey, "User Wallet");
   let activeConnection = customConnection || connection;
 
   try {
@@ -232,7 +266,7 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
     }
 
     transaction.recentBlockhash = blockhash;
-    transaction.feePayer = wallet.publicKey;
+    transaction.feePayer = wallet.publicKey || userPublicKey;
 
     const signature = await wallet.sendTransaction(transaction, activeConnection, {
       preflightCommitment: 'processed',
@@ -273,9 +307,9 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     throw new Error("Wallet not connected");
   }
 
-  const userPublicKey = new PublicKey(wallet.publicKey.toString());
+  const userPublicKey = toPublicKey(wallet.publicKey, "User Wallet");
   let activeConnection = customConnection || connection;
-  const CERTIFICATE_FEE = 0.00001; // Minimal fee for Mainnet testing
+  const CERTIFICATE_FEE = 0; // Price set to 0 as requested
 
   try {
     console.log(`Minting cNFT Certificate for audit ${auditData.id} to ${userPublicKey.toBase58()}`);
@@ -327,7 +361,7 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
     }
 
     transaction.recentBlockhash = blockhash;
-    transaction.feePayer = wallet.publicKey;
+    transaction.feePayer = wallet.publicKey || userPublicKey;
 
     const signature = await wallet.sendTransaction(transaction, activeConnection, {
       preflightCommitment: 'processed',

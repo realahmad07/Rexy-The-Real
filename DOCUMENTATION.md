@@ -19,7 +19,7 @@ Rexy AI Auditor is a cutting-edge, blockchain-verified security auditing platfor
 
 ### 3. Pricing Model
 - **Initial AI Audit**: **FREE** (User only pays the standard Solana network gas fee via the Memo Program).
-- **cNFT Audit Certificate**: **0.05 SOL** (The fee for minting the "Verified" status badge).
+- **cNFT Audit Certificate**: **FREE** (Only standard gas fees apply to receive the "Verified" status badge).
 
 ### 4. Advanced Security Visualization
 - **Live Blockchain Graph**: A real-time D3.js visualization of network activity and audit propagation.

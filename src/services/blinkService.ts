@@ -45,7 +45,7 @@ export function generateAuditBlink(contractAddress?: string): SolanaAction {
     links: {
       actions: [
         {
-          label: 'Run AI Audit (0.05 SOL)',
+          label: 'Run AI Audit (Free + Gas)',
           href: `/api/actions/audit?address={address}`,
           parameters: [
             {

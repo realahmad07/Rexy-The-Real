@@ -22,14 +22,14 @@ Rexy is an AI-powered smart contract security layer designed to provide real-tim
 
 ## 💰 Pricing Model
 - **Initial AI Audit**: **FREE** (User only pays the standard Solana network gas fee via the Memo Program).
-- **cNFT Audit Certificate**: **0.05 SOL** (The fee for minting the "Verified" status badge).
+- **cNFT Audit Certificate**: **FREE** (Only standard gas fees apply to receive the "Verified" status badge).
 
 ## 📖 How to Run the Demo
 1. **Connect Wallet**: Click "Select Wallet" in the header. Connect your **Phantom** wallet (set to **Devnet**).
 2. **Fetch or Paste Code**: Enter a Solana address to fetch code or paste your Rust/Anchor program directly.
 3. **Pay Gas & Audit**: Click "Pay Gas & Start AI Audit". This triggers a real transaction (0 SOL + gas) with **Priority Fees** to record your audit intent.
 4. **Record Proof**: Once the audit is done, click "Record Proof On-Chain" to store the hash and score on Solana.
-5. **Mint Certificate**: Click "Mint Certificate (0.05 SOL)" to receive your on-chain "Verified" security badge.
+5. **Mint Certificate**: Click "Mint Certificate" to receive your on-chain "Verified" security badge.
 
 ## 🏆 Hackathon Submission Details
 - **Project Name**: Rexy AI Auditor

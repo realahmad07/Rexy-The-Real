@@ -27,7 +27,7 @@ export async function performAudit(contractCode: string): Promise<AuditReport | 
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: `Analyze the following smart contract code:\n\n${contractCode}`,
       config: {
         systemInstruction: `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
