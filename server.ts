@@ -1,8 +1,9 @@
 import express from "express";
 import cors from "cors";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+// Use .js extension for TS imports in ESM if needed, or rely on loader/runtime
 import { generateAuditBlink } from "./src/services/blinkService.ts";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -59,8 +60,12 @@ async function startServer() {
   });
 
   // Handle production vs development
-  const isProduction = process.env.NODE_ENV === "production" || process.env.VITE_USER_NODE_ENV === "production";
   const distPath = path.resolve(process.cwd(), "dist");
+  
+  // More robust production check: if NODE_ENV is production OR dist folder exists
+  const isProduction = process.env.NODE_ENV === "production" || 
+                       process.env.VITE_USER_NODE_ENV === "production" ||
+                       fs.existsSync(distPath);
   
   console.log(`Checking architecture: ${isProduction ? 'Production' : 'Development'}`);
   console.log(`Current working directory: ${process.cwd()}`);
@@ -68,11 +73,16 @@ async function startServer() {
 
   if (isProduction) {
     if (fs.existsSync(distPath)) {
-      console.log(`✅ Dist directory found at ${distPath}`);
+      console.log(`✅ Serving static files from ${distPath}`);
       app.use(express.static(distPath));
       
-      // In Express 5, *all captures everything as a parameter named "all"
-      app.get("*all", (req, res) => {
+      // SPA Fallback
+      app.get("*", (req, res, next) => {
+        // Skip API routes
+        if (req.path.startsWith('/api')) {
+          return next();
+        }
+        
         const indexPath = path.join(distPath, "index.html");
         if (fs.existsSync(indexPath)) {
           res.sendFile(indexPath);
