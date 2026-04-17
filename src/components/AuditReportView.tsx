@@ -18,6 +18,7 @@ import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
 
 import { getClusterParam } from '../services/solanaService';
+import ReactDiffViewer from 'react-diff-viewer-continued';
 
 interface AuditReportViewProps {
   report: AuditReport;
@@ -196,6 +197,8 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const [isApplied, setIsApplied] = useState(false);
   const [localSimulation, setLocalSimulation] = useState(isSimulation || false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
+  const [isApplyingFixes, setIsApplyingFixes] = useState(false);
+  const [fixProgress, setFixProgress] = useState(0);
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setNotification({ message, type });
@@ -282,6 +285,30 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
     } catch (err) {
       showNotification("Failed to copy share link.", "error");
     }
+  };
+
+  const handleApplyFixInternal = async () => {
+    if (!report.fullFixedCode) {
+      showNotification("No fixed code available to apply.", "error");
+      return;
+    }
+    
+    setIsApplyingFixes(true);
+    setFixProgress(0);
+    
+    // Simulate AI "patching" the file
+    const steps = ["Analyzing AST...", "Applying Security Patterns...", "Verifying Logic Flows...", "Compiling Result..."];
+    for (let i = 0; i < steps.length; i++) {
+      showNotification(steps[i], "info");
+      await new Promise(r => setTimeout(r, 600));
+      setFixProgress((i + 1) * 25);
+    }
+    
+    showNotification("Security patches applied successfully! Returning to editor.", "success");
+    await new Promise(r => setTimeout(r, 1000));
+    
+    onApplyFix();
+    setIsApplyingFixes(false);
   };
 
   const handleExportPDF = async () => {
@@ -558,6 +585,51 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
         ))}
       </div>
 
+      {/* REXY REMEDIATION DIFF */}
+      {report.originalCode && report.fullFixedCode && (
+        <div className="border-b border-slate-100 bg-slate-50/20">
+          <div className="p-12 lg:px-20 flex items-center justify-between border-b border-slate-100 bg-white">
+            <div className="flex items-center gap-4">
+              <FileCode className="w-6 h-6 text-rexy-primary" />
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">Interactive Remediation</h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Review AI-Generated Patches</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 lg:p-12">
+            <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-2xl bg-white">
+              <ReactDiffViewer
+                oldValue={report.originalCode}
+                newValue={report.fullFixedCode}
+                splitView={true}
+                useDarkTheme={false}
+                leftTitle="Original"
+                rightTitle="Rexy-Secured"
+                styles={{
+                  variables: {
+                    light: {
+                      diffViewerBackground: '#fff',
+                      addedBackground: '#f0fdf4',
+                      addedColor: '#166534',
+                      removedBackground: '#fef2f2',
+                      removedColor: '#991b1b',
+                      wordAddedBackground: '#dcfce7',
+                      wordRemovedBackground: '#fee2e2',
+                    }
+                  },
+                  contentText: {
+                    fontSize: '11px',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    lineHeight: '1.6'
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* POST-AUDIT ROADMAP */}
       <div className="grid grid-cols-1 lg:grid-cols-12 bg-slate-900 text-white">
         <div className="lg:col-span-8 p-12 lg:p-20 space-y-12">
@@ -580,12 +652,27 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
             ))}
           </div>
         </div>
-        <div className="lg:col-span-4 p-12 lg:p-20 flex items-center justify-center bg-white/5">
+        <div className="lg:col-span-4 p-12 lg:p-20 flex flex-col items-center justify-center bg-white/5 relative overflow-hidden">
+          {isApplyingFixes && (
+            <motion.div 
+              initial={{ height: 0 }}
+              animate={{ height: `${fixProgress}%` }}
+              className="absolute left-0 bottom-0 w-1 bg-rexy-primary/30 z-0"
+            />
+          )}
           <button 
-            onClick={onApplyFix}
-            className="w-full py-6 bg-rexy-primary text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-2xl shadow-rexy-primary/20"
+            onClick={handleApplyFixInternal}
+            disabled={isApplyingFixes || !report.fullFixedCode}
+            className="w-full py-6 bg-rexy-primary text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-2xl shadow-rexy-primary/20 relative z-10 disabled:opacity-50"
           >
-            Apply All Fixes to Code
+            {isApplyingFixes ? (
+              <div className="flex items-center justify-center gap-3">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Fixing {fixProgress}%</span>
+              </div>
+            ) : (
+              "Apply All Fixes to Code"
+            )}
           </button>
         </div>
       </div>

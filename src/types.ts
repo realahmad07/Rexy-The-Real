@@ -22,6 +22,7 @@ export interface AuditReport {
   codeHash?: string;
   contractName?: string;
   fullFixedCode?: string;
+  originalCode?: string;
   gasOptimizationSummary?: string;
   nftAddress?: string;
   isCNFT?: boolean;

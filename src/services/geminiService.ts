@@ -78,7 +78,7 @@ The 'summary' field MUST be a comprehensive, multi-paragraph executive summary (
 4. Strategic recommendations for long-term security.
 5. A concluding statement on the contract's readiness for mainnet.
 
-For every issue, provide a clear 'fixedCode' snippet that follows best practices for the detected language.`,
+For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also provide a 'fullFixedCode' field containing the ENTIRE smart contract with ALL security improvements and vulnerabilities patched.`,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

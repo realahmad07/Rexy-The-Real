@@ -80,6 +80,11 @@ const AuditView: React.FC = () => {
       const result = await performAudit(auditCode);
       if (result) {
         let finalSignature = signature;
+        
+        const reportWithOriginal = {
+          ...result,
+          originalCode: auditCode
+        };
 
         // Step 3: Record Proof On-Chain (Real proof with hash)
         if (!isSimulation && connected && wallet.publicKey) {
@@ -94,7 +99,7 @@ const AuditView: React.FC = () => {
         }
 
         const auditData = {
-          ...result,
+          ...reportWithOriginal,
           userId: connected && wallet.publicKey ? wallet.publicKey.toString() : 'anonymous',
           timestamp: Date.now(),
           onChainProof: finalSignature,
