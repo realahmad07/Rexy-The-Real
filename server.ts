@@ -62,14 +62,15 @@ async function startServer() {
   // Handle production vs development
   const distPath = path.resolve(process.cwd(), "dist");
   
-  // More robust production check: if NODE_ENV is production OR dist folder exists
+  // Only enter production mode if explicitly requested via NODE_ENV
+  // This prevents stale 'dist' folders from blocking live development in AI Studio
   const isProduction = process.env.NODE_ENV === "production" || 
-                       process.env.VITE_USER_NODE_ENV === "production" ||
-                       fs.existsSync(distPath);
+                       process.env.VITE_USER_NODE_ENV === "production";
   
   console.log(`Checking architecture: ${isProduction ? 'Production' : 'Development'}`);
   console.log(`Current working directory: ${process.cwd()}`);
   console.log(`Expected dist path: ${distPath}`);
+  console.log(`Dist folder exists: ${fs.existsSync(distPath)}`);
 
   if (isProduction) {
     if (fs.existsSync(distPath)) {

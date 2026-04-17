@@ -16,6 +16,22 @@ export default defineConfig(({ mode }) => {
       'process.env.VITE_TREASURY_ADDRESS': JSON.stringify(env.VITE_TREASURY_ADDRESS || process.env.VITE_TREASURY_ADDRESS || ""),
       global: 'globalThis',
     },
+    optimizeDeps: {
+      include: [
+        '@solana/web3.js',
+        '@solana/wallet-adapter-react',
+        '@solana/wallet-adapter-react-ui',
+        'framer-motion',
+        'buffer',
+        'lucide-react'
+      ],
+      esbuildOptions: {
+        target: 'esnext',
+        define: {
+          global: 'globalThis'
+        }
+      }
+    },
     server: {
       port: 3000,
       host: '0.0.0.0',
