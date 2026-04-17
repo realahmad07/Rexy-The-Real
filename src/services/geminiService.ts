@@ -12,12 +12,20 @@ function getAi(apiKey: string) {
 }
 
 export async function performAudit(contractCode: string): Promise<AuditReport | null> {
-  // Try to get API key from import.meta.env (Vite standard) or process.env (defined by Vite/Server)
-  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  // Check multiple sources for the API key to handle different deployment environments
+  const apiKey = 
+    process.env.GEMINI_API_KEY || 
+    (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+    (import.meta as any).env?.GEMINI_API_KEY;
   
-  if (!apiKey || apiKey === "" || apiKey === "undefined" || apiKey.includes("TODO")) {
-    console.error("GEMINI_API_KEY is missing.");
-    throw new Error("GEMINI_API_KEY is not configured. Please ensure your API key is set in Netlify/Environment variables.");
+  if (!apiKey || apiKey === "" || apiKey === "undefined") {
+    console.error("GEMINI_API_KEY is missing from the environment.");
+    throw new Error(
+      "Gemini AI integration is not configured. \n\n" +
+      "1. AI Studio Settings: Go to Settings -> API Keys and ensure GEMINI_API_KEY is set.\n" +
+      "2. Local Development: Ensure your .env file contains GEMINI_API_KEY.\n" +
+      "3. Production (Netlify/Vercel): Add GEMINI_API_KEY to your platform's Environment Variables."
+    );
   }
 
   // Debug log (masked) to verify key presence in production
@@ -27,7 +35,7 @@ export async function performAudit(contractCode: string): Promise<AuditReport | 
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-pro-preview",
       contents: `Analyze the following smart contract code:\n\n${contractCode}`,
       config: {
         systemInstruction: `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
