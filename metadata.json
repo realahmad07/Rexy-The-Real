@@ -1,5 +1,6 @@
 {
-  "name": "Rexy AI Auditor",
+  "name": "Rexy AI Auditor Final",
   "description": "Advanced AI-powered smart contract security auditor for Solana and other chains.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }

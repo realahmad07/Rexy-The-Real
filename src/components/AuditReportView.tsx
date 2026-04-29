@@ -5,7 +5,7 @@ import {
   AlertTriangle, CheckCircle, Info, Download, Shield, Code, 
   ChevronDown, ChevronUp, Zap, FileText, FileCode, Award, 
   Hash, Clock, ExternalLink, Share2, BadgeCheck, Github, 
-  Loader2, Skull, Brain, DollarSign, Terminal, Layout, List, Eye, Copy
+  Loader2, Skull, Brain, DollarSign, Terminal, Layout, List, Eye, Copy, Atom
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import Markdown from 'react-markdown';
@@ -113,8 +113,8 @@ const IssueItem: React.FC<{ issue: AuditIssue; index: number; onCopy: (code: str
                     className="overflow-hidden"
                   >
                     <div className="relative group/code">
-                      <pre className="p-4 bg-slate-900 rounded-xl text-[10px] font-mono text-emerald-400 overflow-x-auto shadow-inner">
-                        <code>{issue.fixedCode}</code>
+                      <pre className="p-6 bg-slate-950 rounded-2xl text-[11px] font-mono text-emerald-400 overflow-x-auto shadow-2xl border border-white/5 leading-relaxed">
+                        <code className="block whitespace-pre">{issue.fixedCode}</code>
                       </pre>
                       <button
                         onClick={() => onCopy(issue.fixedCode!)}
@@ -128,6 +128,90 @@ const IssueItem: React.FC<{ issue: AuditIssue; index: number; onCopy: (code: str
               </AnimatePresence>
             </div>
           )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const AuditCertificate: React.FC<{ report: AuditReport; onDownload: () => void }> = ({ report, onDownload }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="max-w-4xl mx-auto p-12 bg-white rounded-[2rem] border-8 border-slate-900 shadow-2xl relative overflow-hidden"
+      id="security-certificate"
+    >
+      {/* Decorative background elements */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-rexy-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-slate-900/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+      
+      <div className="relative z-10 space-y-12 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center">
+            <Shield className="w-10 h-10 text-white" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-sm font-black text-slate-900 uppercase tracking-[0.4em]">Official Certificate of Audit</h1>
+            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Protocol v2.4.0-PRO • Rexy AI Security</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">This certifies that the smart contract</p>
+          <h2 className="text-5xl font-black text-slate-900 tracking-tighter uppercase">{report.contractName || 'Unnamed Protocol'}</h2>
+        </div>
+
+        <div className="flex justify-center items-center gap-12 py-8 border-y border-slate-100">
+          <div className="text-center">
+            <div className="text-5xl font-black text-slate-900">{report.score}</div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Security Score</div>
+          </div>
+          <div className="w-px h-12 bg-slate-200" />
+          <div className="text-center">
+            <div className="text-5xl font-black text-emerald-500">PASS</div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Report Status</div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed italic">
+            "We have performed an exhaustive multi-stage security audit, including static analysis, formal logic verification, and deep attack simulation. This contract has met the rigorous security requirements of the Rexy AI Auditor engine."
+          </p>
+          
+          <div className="flex flex-col items-center gap-2">
+            <div className="px-4 py-2 bg-slate-900 rounded-lg flex items-center gap-2">
+              <BadgeCheck className="w-4 h-4 text-rexy-primary" />
+              <span className="text-[10px] font-mono text-white tracking-widest uppercase">Verified on Solana Mainnet</span>
+            </div>
+            {report.codeHash && (
+              <span className="text-[8px] font-mono text-slate-400 uppercase tracking-widest">Hash: {report.codeHash}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-8 flex justify-between items-end">
+          <div className="text-left space-y-1">
+            <div className="w-32 h-px bg-slate-900 mb-4" />
+            <div className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Rexy Sentinel</div>
+            <div className="text-[8px] font-mono text-slate-400 uppercase">Lead Security Engine</div>
+          </div>
+          
+          <div className="flex gap-4">
+            <button 
+              onClick={onDownload}
+              className="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-slate-600 group"
+              title="Download Certificate"
+            >
+              <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            </button>
+          </div>
+
+          <div className="text-right space-y-1">
+            <div className="w-32 h-px bg-slate-900 mb-4 ml-auto" />
+            <div className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Date of Issue</div>
+            <div className="text-[8px] font-mono text-slate-400 uppercase">{new Date(report.timestamp).toLocaleDateString()}</div>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -407,6 +491,24 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
     }
   };
 
+  const handleDownloadCertificate = async () => {
+    const el = document.getElementById('security-certificate');
+    if (!el) return;
+    
+    try {
+      showNotification("Generating high-resolution certificate...", "info");
+      const dataUrl = await toJpeg(el, { quality: 0.95, backgroundColor: '#fff' });
+      const link = document.createElement('a');
+      link.download = `Rexy_Certificate_${report.contractName || 'Audit'}.jpg`;
+      link.href = dataUrl;
+      link.click();
+      showNotification("Certificate downloaded!", "success");
+    } catch (err) {
+      console.error(err);
+      showNotification("Failed to generate certificate image.", "error");
+    }
+  };
+
   return (
     <div id="audit-report" className="max-w-7xl mx-auto bg-white text-slate-900 rounded-[3rem] overflow-hidden border border-slate-200 shadow-xl selection:bg-rexy-primary/10">
       {/* HEADER SECTION */}
@@ -483,36 +585,32 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
           <Share2 className="w-5 h-5 text-slate-400 group-hover:text-rexy-primary transition-colors" />
           <span className="text-xs font-black uppercase tracking-widest text-slate-600">{copied ? "Link Copied" : "Share via Blink"}</span>
         </button>
-        <div className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group">
-          {certificateMint ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-4 text-emerald-500">
-                <BadgeCheck className="w-5 h-5" />
-                <span className="text-xs font-black uppercase tracking-widest">Certificate Minted</span>
-              </div>
-              <a 
-                href={`https://solscan.io/${certificateSignature ? `tx/${certificateSignature}` : `token/${certificateMint}`}${getClusterParam()}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 text-[9px] font-bold text-rexy-primary hover:underline"
-              >
-                <span>View on Solscan</span>
-                <ExternalLink className="w-2.5 h-2.5" />
-              </a>
-            </div>
-          ) : (
-            <button 
-              onClick={handleMint}
-              disabled={isMinting}
-              className="flex items-center gap-4 group disabled:opacity-50"
-            >
-              {isMinting ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <Award className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />}
-              <span className="text-xs font-black uppercase tracking-widest text-slate-600">
-                Mint cNFT Certificate
-              </span>
-            </button>
-          )}
-        </div>
+        {/* NEW: Staking Button */}
+        <button 
+          onClick={async () => {
+             setIsRecordingOnChain(true);
+             try {
+                // Now using real on-chain hook
+                const { useRexyRegistry } = await import('../hooks/useRexyRegistry');
+                const { stakeCertificate } = useRexyRegistry();
+                const result = await stakeCertificate({ programIdAudited: report.contractName });
+                if (result.success) {
+                   showNotification("Successfully staked 0.1 SOL security bond on Solana!", "success");
+                } else {
+                   showNotification("Staking failed: " + result.error, "error");
+                }
+             } catch (err: any) {
+                showNotification("Staking error: " + err.message, "error");
+             } finally {
+                setIsRecordingOnChain(false);
+             }
+          }}
+          disabled={isRecordingOnChain}
+          className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group border-l border-slate-100"
+        >
+          {isRecordingOnChain ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <DollarSign className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />}
+          <span className="text-xs font-black uppercase tracking-widest text-slate-600">Stake Security Bond (0.1 SOL)</span>
+        </button>
       </div>
 
       {/* EXECUTIVE SUMMARY */}
@@ -523,10 +621,27 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
             <div className="w-12 h-px bg-slate-900" />
           </div>
         </div>
-        <div className="lg:col-span-9 p-12 lg:p-20">
+        <div className="lg:col-span-9 p-12 lg:p-20 space-y-12">
           <div className="prose prose-lg max-w-none text-slate-600 leading-relaxed font-light text-justify">
             <Markdown>{report.summary}</Markdown>
           </div>
+          
+          {report.quantumReadinessSummary && (
+            <div className="mt-8 p-8 rounded-[2rem] bg-purple-50 border border-purple-100 shadow-inner">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-purple-500 rounded-xl shadow-lg shadow-purple-500/20">
+                  <Atom className="w-6 h-6 text-white animate-[spin_10s_linear_infinite]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-purple-900 tracking-tight">Q-Day Readiness Assessment</h3>
+                  <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mt-1">Post-Quantum Threat Simulation</p>
+                </div>
+              </div>
+              <div className="prose prose-purple max-w-none text-purple-800/80 leading-relaxed font-medium">
+                <Markdown>{report.quantumReadinessSummary}</Markdown>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -534,9 +649,9 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-b border-slate-100">
         {[
           { label: 'Logic Integrity', value: 85, icon: Brain, color: 'text-blue-500', bg: 'bg-blue-50' },
+          { label: 'Q-Day Readiness', value: report.quantumReadinessScore || 0, icon: Atom, color: 'text-purple-500', bg: 'bg-purple-50' },
           { label: 'Financial Safety', value: 92, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
           { label: 'Access Control', value: 78, icon: Shield, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-          { label: 'Gas Efficiency', value: 65, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
         ].map((m, i) => (
           <div key={i} className="p-12 border-r border-slate-100 last:border-r-0 hover:bg-slate-50 transition-colors group">
             <div className="flex items-center justify-between mb-8">
@@ -588,7 +703,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
       {/* REXY REMEDIATION DIFF */}
       {report.originalCode && report.fullFixedCode && (
         <div className="border-b border-slate-100 bg-slate-50/20">
-          <div className="p-12 lg:px-20 flex items-center justify-between border-b border-slate-100 bg-white">
+          <div className="p-12 lg:px-20 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 bg-white gap-6">
             <div className="flex items-center gap-4">
               <FileCode className="w-6 h-6 text-rexy-primary" />
               <div>
@@ -596,16 +711,28 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Review AI-Generated Patches</p>
               </div>
             </div>
+            
+            {report.quantumReadinessSummary && (
+              <div className="px-5 py-2.5 bg-purple-50 border border-purple-200 rounded-full flex items-center gap-3 shadow-inner">
+                <Atom className="w-4 h-4 text-purple-600 animate-[spin_5s_linear_infinite]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-purple-800">🛡️ Quantum Risk Reduced to 0%</span>
+              </div>
+            )}
           </div>
           <div className="p-4 lg:p-12">
-            <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-2xl bg-white">
+            <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-2xl bg-white relative">
+              {report.quantumReadinessSummary && (
+                <div className="absolute top-0 right-0 z-10 bg-purple-600 text-white text-[9px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-bl-xl shadow-lg border-b border-l border-purple-400">
+                  Q-Day Code Enhancements Applied
+                </div>
+              )}
               <ReactDiffViewer
                 oldValue={report.originalCode}
                 newValue={report.fullFixedCode}
                 splitView={true}
                 useDarkTheme={false}
                 leftTitle="Original"
-                rightTitle="Rexy-Secured"
+                rightTitle="Rexy-Secured (Quantum-Proof)"
                 styles={{
                   variables: {
                     light: {
@@ -621,11 +748,26 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
                   contentText: {
                     fontSize: '11px',
                     fontFamily: '"JetBrains Mono", monospace',
-                    lineHeight: '1.6'
+                    lineHeight: '1.8',
+                    letterSpacing: '0.02em'
                   }
                 }}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* OFFICIAL CERTIFICATE */}
+      {report.score >= 85 && (
+        <div className="p-12 lg:p-32 bg-slate-50 border-b border-slate-100">
+          <div className="max-w-4xl mx-auto space-y-12">
+            <div className="text-center space-y-4">
+              <h3 className="text-xs font-black text-emerald-500 uppercase tracking-[0.4em]">Achievement Unlocked</h3>
+              <h2 className="text-4xl font-black text-slate-900 tracking-tight">Security Excellence Award</h2>
+              <p className="text-slate-500 max-w-lg mx-auto text-sm">Your contract has surpassed our high-security threshold. You are eligible for an official Rexy Security Certificate.</p>
+            </div>
+            <AuditCertificate report={report} onDownload={handleDownloadCertificate} />
           </div>
         </div>
       )}

@@ -25,6 +25,13 @@ async function startServer() {
     });
   });
 
+  // Public Goods Registry API (from publicGoodsApi.js)
+  app.get("/api/audit/:programId", async (req, res) => {
+     // I will need to import/implement the logic from publicGoodsApi.js here
+     // For now, I will add a placeholder note or implement the simple query
+     res.status(501).send("Not fully configured yet");
+  });
+
   // Solana Actions (Blinks)
   app.get("/api/actions/audit", (req, res) => {
     res.set({

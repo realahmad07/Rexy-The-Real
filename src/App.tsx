@@ -5,7 +5,7 @@ import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AuditView from './components/AuditView';
-import MonitoringView from './components/MonitoringView';
+import CopilotView from './components/CopilotView';
 import InfoView from './components/InfoView';
 import OnboardingModal from './components/OnboardingModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -121,7 +121,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-1 bg-rexy-bg/50 p-1 rounded-xl border border-rexy-border">
-            {['dashboard', 'audit', 'monitoring', 'info'].map((tab) => (
+            {['dashboard', 'audit', 'copilot', 'info'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -131,7 +131,7 @@ const App: React.FC = () => {
                     : "text-slate-500 hover:text-slate-900 hover:bg-rexy-card"
                 }`}
               >
-                {tab}
+                {tab === 'copilot' ? 'Rexy Copilot' : tab}
               </button>
             ))}
           </div>
@@ -153,7 +153,7 @@ const App: React.FC = () => {
           >
             {activeTab === 'dashboard' && <Dashboard />}
             {activeTab === 'audit' && <AuditView />}
-            {activeTab === 'monitoring' && <MonitoringView />}
+            {activeTab === 'copilot' && <CopilotView />}
             {activeTab === 'info' && <InfoView />}
           </motion.div>
         </AnimatePresence>

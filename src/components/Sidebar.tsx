@@ -12,7 +12,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'audit', label: 'AI Audit', icon: ShieldCheck },
-    { id: 'monitoring', label: 'Monitoring', icon: Activity },
+    { id: 'copilot', label: 'Rexy Copilot', icon: Activity },
     { id: 'info', label: 'Info', icon: Info },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -49,9 +49,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
             )} />
             <div className="flex flex-col items-start leading-tight">
               <span className="font-bold text-sm">{item.label}</span>
-              {item.id === 'monitoring' && (
+              {item.id === 'copilot' && (
                 <span className="mt-1 px-1.5 py-0.5 bg-amber-400 text-slate-900 text-[8px] font-black uppercase tracking-[0.15em] rounded shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
-                  Beta
+                  Live
                 </span>
               )}
             </div>

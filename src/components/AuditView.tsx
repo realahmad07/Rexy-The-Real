@@ -18,6 +18,7 @@ const AuditView: React.FC = () => {
   const [fetchingCode, setFetchingCode] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [isSimulation, setIsSimulation] = useState(false);
+  const [isQuantumSimulation, setIsQuantumSimulation] = useState(false);
   const [report, setReport] = useState<AuditReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +78,7 @@ const AuditView: React.FC = () => {
       setReport(null);
 
       // Step 2: Perform AI Audit
-      const result = await performAudit(auditCode);
+      const result = await performAudit(auditCode, isQuantumSimulation);
       if (result) {
         let finalSignature = signature;
         
@@ -180,23 +181,59 @@ const AuditView: React.FC = () => {
                 className="flex-1 p-6 bg-transparent resize-none focus:outline-none font-mono text-sm leading-relaxed text-slate-700 placeholder:text-slate-400"
               />
             </div>
-            <div className="flex items-center justify-between px-2">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div className="relative">
-                  <input 
-                    type="checkbox" 
-                    checked={isSimulation}
-                    onChange={(e) => setIsSimulation(e.target.checked)}
-                    className="sr-only"
-                  />
-                  <div className={`w-10 h-5 rounded-full transition-colors ${isSimulation ? 'bg-rexy-primary' : 'bg-slate-200'}`} />
-                  <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isSimulation ? 'translate-x-5' : 'translate-x-0'}`} />
-                </div>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-rexy-primary transition-colors">
-                  Simulation Mode (No SOL Required)
-                </span>
-              </label>
-              <div className="text-[9px] font-bold text-slate-400 italic">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
+              <div className="flex flex-col gap-3">
+                {/* NEW: Simulation Toggle */}
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="relative">
+                    <input 
+                      type="checkbox" 
+                      checked={isSimulation}
+                      onChange={(e) => setIsSimulation(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-10 h-5 rounded-full transition-colors ${isSimulation ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isSimulation ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-emerald-500 transition-colors">
+                    Demo Mode (Mock Transactions)
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="relative">
+                    <input 
+                      type="checkbox" 
+                      checked={isQuantumSimulation}
+                      onChange={(e) => setIsQuantumSimulation(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-10 h-5 rounded-full transition-colors ${isQuantumSimulation ? 'bg-purple-500' : 'bg-slate-200'}`} />
+                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isQuantumSimulation ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-purple-500 transition-colors flex items-center gap-1">
+                    Simulate Q-Day Attack <span className="opacity-50">(Quantum Readiness)</span>
+                  </span>
+                </label>
+                
+                {/* NEW: Simulation Toggle */}
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="relative">
+                    <input 
+                      type="checkbox" 
+                      checked={isSimulation}
+                      onChange={(e) => setIsSimulation(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-10 h-5 rounded-full transition-colors ${isSimulation ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isSimulation ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-emerald-500 transition-colors">
+                    Demo Mode (Mock Transactions)
+                  </span>
+                </label>
+              </div>
+              <div className="text-[9px] font-bold text-slate-400 italic self-end">
                 {isSimulation ? "Bypassing real transaction" : "Real on-chain proof"}
               </div>
             </div>

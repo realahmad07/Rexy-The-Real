@@ -73,9 +73,9 @@ export function getTreasuryPublicKey(): PublicKey {
 let memoProgramId: PublicKey | null = null;
 function getMemoProgramId(): PublicKey {
   if (!memoProgramId) {
-    // Standard Memo Program v2 ID. Cleaned of any potential hidden characters.
     const ID = "MemoSq4gqABAXeb9unvyrRveWsyhkex96C4vX5Xf67";
-    memoProgramId = toPublicKey(ID, "Memo Program ID");
+    // Force direct PublicKey construction to bypass potential string issues
+    memoProgramId = new PublicKey(ID);
   }
   return memoProgramId;
 }
@@ -200,6 +200,10 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Payment Error:", errorMessage);
     
+    if (errorMessage.includes("circular structure")) {
+      throw new Error("Transaction cancelled or failed due to a wallet internal serialization issue. Please refresh the page and try again.");
+    }
+
     if (errorMessage.includes("expired") || errorMessage.includes("block height exceeded")) {
       throw new Error("Transaction expired. This usually happens if the wallet approval took too long or the network is congested. Please try again.");
     }
@@ -300,6 +304,9 @@ export async function recordAuditOnChain(wallet: WalletContextState, auditHash: 
   } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("On-Chain Recording Error:", errorMessage);
+    if (errorMessage.includes("circular structure")) {
+      throw new Error("Failed to record audit on-chain due to a wallet internal serialization issue. Please refresh and try again.");
+    }
     throw new Error(`Failed to record audit on-chain: ${errorMessage}`);
   }
 }
@@ -402,6 +409,9 @@ export async function mintAuditCertificate(wallet: WalletContextState, auditData
   } catch (error: any) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Minting Error:", errorMessage);
+    if (errorMessage.includes("circular structure")) {
+      throw new Error("Failed to mint certificate due to a wallet internal serialization issue. Please refresh and try again.");
+    }
     throw new Error(`Failed to mint certificate: ${errorMessage}`);
   }
 }

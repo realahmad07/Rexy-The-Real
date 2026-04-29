@@ -17,6 +17,8 @@ export interface AuditReport {
   id?: string;
   summary: string;
   score: number; // 0-100
+  quantumReadinessScore?: number; // 0-100
+  quantumReadinessSummary?: string;
   issues: AuditIssue[];
   timestamp: number;
   codeHash?: string;
