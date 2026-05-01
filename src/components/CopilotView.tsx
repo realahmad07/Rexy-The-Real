@@ -35,12 +35,34 @@ export default function CopilotView() {
   // Fetch Live Prices via CoinGecko
   useEffect(() => {
     const fetchPrices = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
       try {
-        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana,raydium,jupiter-exchange-solana,jito-governance-token,bonk&vs_currencies=usd&include_24hr_change=true');
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana,raydium,jupiter-exchange-solana,jito-governance-token,bonk&vs_currencies=usd&include_24hr_change=true', {
+            signal: controller.signal
+        });
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
         const data = await res.json();
-        setPrices(data);
-      } catch (err) {
-        console.error("Failed to fetch live prices", err);
+        
+        // Simple data validation
+        if (data && typeof data === 'object') {
+           setPrices(data);
+        } else {
+            console.error("Invalid price data format received");
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+            console.error("Price fetch timed out");
+        } else {
+            console.error("Failed to fetch live prices", err);
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
     };
     fetchPrices();

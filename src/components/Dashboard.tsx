@@ -35,7 +35,7 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-rexy-card border border-rexy-border rounded-2xl p-8 shadow-2xl relative overflow-hidden group">
+          <div className="bg-rexy-card border border-rexy-border rounded-3xl p-8 shadow-2xl relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
             <div className="absolute top-0 right-0 p-8 opacity-[0.05] pointer-events-none group-hover:scale-110 transition-transform duration-700">
               <Shield className="w-48 h-48 text-rexy-primary" />
             </div>
@@ -45,18 +45,18 @@ const Dashboard: React.FC = () => {
                 <Shield className="w-3 h-3 text-emerald-500" />
                 <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Phase 1: Active</span>
               </div>
-              <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tighter">Welcome to Rexy AI Auditor</h2>
+              <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tighter">Welcome to Rexy AI Auditor</h2>
               <p className="text-base text-slate-600 max-w-xl mb-8 leading-relaxed">
                 The world's first real-time AI security layer for the Solana ecosystem. 
                 We combine formal verification with advanced LLM reasoning to protect your protocols.
               </p>
               
               <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 bg-rexy-primary/10 rounded-xl border border-rexy-primary/20">
+                <div className="flex items-center gap-2 px-4 py-2 bg-rexy-primary/10 rounded-2xl border border-rexy-primary/20">
                   <Zap className="w-4 h-4 text-rexy-primary" />
                   <span className="text-xs font-bold text-rexy-primary uppercase tracking-widest">Real-time Scanning</span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
                   <Activity className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">On-Chain Proofs</span>
                 </div>
@@ -64,17 +64,17 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="h-[400px] bg-rexy-card border border-rexy-border rounded-2xl overflow-hidden shadow-xl">
+          <div className="h-[400px] bg-rexy-card border border-rexy-border rounded-3xl overflow-hidden shadow-xl hover:-translate-y-1 transition-transform duration-300">
             <LiveBlockchainGraph />
           </div>
         </div>
 
-        <div className="h-[600px] lg:h-auto bg-rexy-card border border-rexy-border rounded-2xl overflow-hidden shadow-xl">
+        <div className="h-[600px] lg:h-auto bg-rexy-card border border-rexy-border rounded-3xl overflow-hidden shadow-xl hover:-translate-y-1 transition-transform duration-300">
           <VulnerabilityFeed />
         </div>
       </div>
 
-      <div className="bg-rexy-card border border-rexy-border rounded-2xl p-8 shadow-xl">
+      <div className="bg-rexy-card border border-rexy-border rounded-3xl p-8 shadow-xl hover:-translate-y-1 transition-transform duration-300">
         <h3 className="text-xl font-bold mb-6 text-slate-900 flex items-center gap-2">
           <Activity className="w-5 h-5 text-rexy-primary" />
           Recent Audit Activity

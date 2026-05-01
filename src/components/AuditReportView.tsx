@@ -19,6 +19,7 @@ import { toJpeg } from 'html-to-image';
 
 import { getClusterParam } from '../services/solanaService';
 import ReactDiffViewer from 'react-diff-viewer-continued';
+import { useRexyRegistry } from '../hooks/useRexyRegistry';
 
 interface AuditReportViewProps {
   report: AuditReport;
@@ -272,7 +273,9 @@ const ScoreMeter: React.FC<{ score: number }> = ({ score }) => {
 export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onApplyFix, currentUser, isSimulation }) => {
   const { connection } = useConnection();
   const wallet = useWallet();
+  const { stakeCertificate } = useRexyRegistry();
   const [onChainProofSig, setOnChainProofSig] = useState<string | null>(report.onChainProof || null);
+  const [stakedProofSig, setStakedProofSig] = useState<string | null>((report as any).stakedProofSig || null);
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [certificateMint, setCertificateMint] = useState<string | null>(report.certificateMint || null);
@@ -412,15 +415,22 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
       const lineHeight = (fontSize * 0.3527) * 1.2;
       
       for (const line of lines) {
-        if (y + lineHeight > pageHeight - 30) break;
+        if (y + lineHeight > pageHeight - 30) {
+            pdf.addPage();
+            y = margin;
+        }
         pdf.text(line, margin, y + (fontSize * 0.3527));
         y += lineHeight;
       }
       y += marginBottom;
     };
 
-    const addSectionHeader = (title: string) => {
-      if (y > pageHeight - 40) return; 
+    const addSectionHeader = (title: string, marginTop: number = 5) => {
+      y += marginTop;
+      if (y > pageHeight - 40) {
+          pdf.addPage();
+          y = margin;
+      } 
       pdf.setFillColor(240, 240, 240);
       pdf.rect(margin, y, contentWidth, 7, 'F');
       pdf.setFontSize(11);
@@ -442,7 +452,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
       
       y = 40;
 
-      addSectionHeader('CONTRACT OVERVIEW');
+      addSectionHeader('CONTRACT OVERVIEW', 0);
       const scoreColor = report.score > 80 ? [16, 185, 129] : report.score > 50 ? [245, 158, 11] : [239, 68, 68];
       
       pdf.setDrawColor(230, 230, 230);
@@ -472,16 +482,34 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
         renderText(`${m.label}: ${m.value}%`, 9, 'normal', [50, 50, 50], 1);
       });
 
-      y += 5;
       addSectionHeader('VULNERABILITY SUMMARY');
-      report.issues.forEach((issue, i) => {
-        if (y > pageHeight - 40) {
-          pdf.addPage();
-          y = margin;
-        }
-        renderText(`${i + 1}. ${issue.title} (${issue.severity})`, 10, 'bold', [0, 0, 0], 1);
-        renderText(issue.description.substring(0, 200) + '...', 8, 'normal', [100, 100, 100], 4);
-      });
+      if (report.issues && report.issues.length > 0) {
+        report.issues.forEach((issue, i) => {
+          renderText(`${i + 1}. ${issue.title} (${issue.severity})`, 10, 'bold', [0, 0, 0], 1);
+          renderText(issue.description.substring(0, 300) + (issue.description.length > 300 ? '...' : ''), 8, 'normal', [100, 100, 100], 4);
+        });
+      } else {
+        renderText("No vulnerabilities found. The contract passed the audit.", 9, 'italic', [16, 185, 129], 4);
+      }
+
+      addSectionHeader('BLOCKCHAIN PROOFS & INTEGRITY');
+      if (onChainProofSig) {
+        renderText(`Audit Proof Transaction:`, 9, 'bold', [0, 0, 0], 1);
+        renderText(onChainProofSig, 8, 'normal', [99, 102, 241], 3);
+      } else {
+        renderText("Audit Proof: Not recorded on chain yet.", 8, 'normal', [100, 116, 139], 3);
+      }
+
+      if (stakedProofSig) {
+        renderText(`Security Bond Staked (0.001 SOL) Tx:`, 9, 'bold', [0, 0, 0], 1);
+        renderText(stakedProofSig, 8, 'normal', [16, 185, 129], 3);
+      } else {
+        renderText("Security Bond Staked: No security bond staked.", 8, 'normal', [100, 116, 139], 3);
+      }
+
+      addSectionHeader('STAKING TERMS & POLICY');
+      const terms = "By staking a 0.001 SOL security bond, the auditor asserts the validity and integrity of this report. If the audited contract is exploited due to a missed critical vulnerability, the staked funds will be slashed and redistributed to the Rexy treasury. This bond is locked for a period of 90 days. This staking mechanism ensures that auditors have \"skin in the game\" and promotes high-quality, rigorous security analysis. The report's immutability on the Solana blockchain provides transparent provenance for all parties.";
+      renderText(terms, 7, 'normal', [100, 116, 139], 4);
 
       pdf.save(`Rexy_Audit_${report.contractName || 'Report'}.pdf`);
       showNotification("PDF Report exported successfully!", "success");
@@ -586,31 +614,50 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
           <span className="text-xs font-black uppercase tracking-widest text-slate-600">{copied ? "Link Copied" : "Share via Blink"}</span>
         </button>
         {/* NEW: Staking Button */}
-        <button 
-          onClick={async () => {
-             setIsRecordingOnChain(true);
-             try {
-                // Now using real on-chain hook
-                const { useRexyRegistry } = await import('../hooks/useRexyRegistry');
-                const { stakeCertificate } = useRexyRegistry();
-                const result = await stakeCertificate({ programIdAudited: report.contractName });
-                if (result.success) {
-                   showNotification("Successfully staked 0.1 SOL security bond on Solana!", "success");
-                } else {
-                   showNotification("Staking failed: " + result.error, "error");
-                }
-             } catch (err: any) {
-                showNotification("Staking error: " + err.message, "error");
-             } finally {
-                setIsRecordingOnChain(false);
-             }
-          }}
-          disabled={isRecordingOnChain}
-          className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group border-l border-slate-100"
-        >
-          {isRecordingOnChain ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <DollarSign className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />}
-          <span className="text-xs font-black uppercase tracking-widest text-slate-600">Stake Security Bond (0.1 SOL)</span>
-        </button>
+        {stakedProofSig ? (
+          <a
+            href={`https://solscan.io/tx/${stakedProofSig}${getClusterParam()}`}
+            target="_blank"
+            rel="noreferrer"
+            className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group border-l border-slate-100 bg-emerald-50/30"
+          >
+            <DollarSign className="w-5 h-5 text-emerald-500" />
+            <span className="text-xs font-black uppercase tracking-widest text-emerald-600">
+              Staked 0.001 SOL <ExternalLink className="w-3 h-3 inline ml-1 mb-0.5" />
+            </span>
+          </a>
+        ) : (
+          <button 
+            onClick={async () => {
+               setIsRecordingOnChain(true);
+               try {
+                  const result = await stakeCertificate({ programIdAudited: report.contractName });
+                  if (result.success) {
+                     setStakedProofSig(result.signature || null);
+                     if (report.id && !isSimulation) {
+                       try {
+                         await updateDoc(doc(db, 'audits', report.id), { stakedProofSig: result.signature });
+                       } catch (e) {
+                         console.error("Failed to update firestore with staked sig", e);
+                       }
+                     }
+                     showNotification("Successfully staked 0.001 SOL security bond on Solana!", "success");
+                  } else {
+                     showNotification("Staking failed: " + result.error, "error");
+                  }
+               } catch (err: any) {
+                  showNotification("Staking error: " + err.message, "error");
+               } finally {
+                  setIsRecordingOnChain(false);
+               }
+            }}
+            disabled={isRecordingOnChain}
+            className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group border-l border-slate-100"
+          >
+            {isRecordingOnChain ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <DollarSign className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />}
+            <span className="text-xs font-black uppercase tracking-widest text-slate-600">Stake Security Bond (0.001 SOL)</span>
+          </button>
+        )}
       </div>
 
       {/* EXECUTIVE SUMMARY */}

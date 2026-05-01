@@ -4,7 +4,7 @@ import { X, Wallet, ArrowRight, Loader2, CheckCircle2, ShieldCheck, ExternalLink
 import { cn } from '../lib/utils';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { SystemProgram, Transaction, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { getTreasuryPublicKey } from '../services/solanaService';
+import { getTreasuryPublicKey, getClusterParam } from '../services/solanaService';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -111,7 +111,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-dark-muted font-bold">Network</p>
-                      <p className="text-sm font-mono font-bold text-gray-700 dark:text-dark-text">Solana Devnet</p>
+                      <p className="text-sm font-mono font-bold text-gray-700 dark:text-dark-text">Solana Mainnet</p>
                     </div>
                   </div>
                   <ArrowRight className="w-4 h-4 text-gray-300 dark:text-dark-border" />
@@ -186,7 +186,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 </div>
                 <div className="flex gap-3 w-full">
                   <button
-                    onClick={() => window.open(`https://solscan.io/tx/${txHash}?cluster=devnet`, '_blank')}
+                    onClick={() => window.open(`https://solscan.io/tx/${txHash}${getClusterParam()}`, '_blank')}
                     className="flex-1 py-3 border border-gray-200 dark:border-dark-border rounded-xl text-xs font-bold text-gray-600 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-bg transition-all flex items-center justify-center gap-2"
                   >
                     <ExternalLink className="w-3 h-3" /> Solscan

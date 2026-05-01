@@ -4,7 +4,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 // Use .js extension for TS imports in ESM if needed, or rely on loader/runtime
-import { generateAuditBlink } from "./src/services/blinkService.ts";
+import { generateAuditBlink } from "./src/services/blinkService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,11 +69,11 @@ async function startServer() {
   // Handle production vs development
   const distPath = path.resolve(process.cwd(), "dist");
   
-  // Only enter production mode if explicitly requested via NODE_ENV
-  // This prevents stale 'dist' folders from blocking live development in AI Studio
   const isProduction = process.env.NODE_ENV === "production" || 
+                       process.env.NODE_ENV === "prod" ||
                        process.env.VITE_USER_NODE_ENV === "production";
   
+  console.log(`Environment variables: NODE_ENV=${process.env.NODE_ENV}, VITE_USER_NODE_ENV=${process.env.VITE_USER_NODE_ENV}`);
   console.log(`Checking architecture: ${isProduction ? 'Production' : 'Development'}`);
   console.log(`Current working directory: ${process.cwd()}`);
   console.log(`Expected dist path: ${distPath}`);
