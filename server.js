@@ -3,15 +3,46 @@ import cors from "cors";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-// Use .js extension for TS imports in ESM if needed, or rely on loader/runtime
-import { generateAuditBlink } from "./src/services/blinkService.js";
+// Inline blink service to keep server.js pure for "node server.js" without tsx
+const BLINK_CONFIG = {
+  icon: 'https://picsum.photos/seed/sentinel-blink/400/400',
+  title: 'Sentinel AI Audit',
+  description: 'Instantly audit any Solana Smart Contract directly from your feed.',
+  label: 'Audit Now',
+};
+
+function generateAuditBlink(contractAddress) {
+  return {
+    icon: BLINK_CONFIG.icon,
+    title: BLINK_CONFIG.title,
+    description: contractAddress 
+      ? `Audit contract: ${contractAddress}` 
+      : BLINK_CONFIG.description,
+    label: BLINK_CONFIG.label,
+    links: {
+      actions: [
+        {
+          label: 'Run AI Audit (Free + Gas)',
+          href: `/api/actions/audit?address={address}`,
+          parameters: [
+            {
+              name: 'address',
+              label: 'Smart Contract Address',
+              required: true,
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 8080;
 
   app.use(cors());
   app.use(express.json());
@@ -41,7 +72,7 @@ async function startServer() {
       "Content-Type": "application/json",
       "X-Blockchain-Ids": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
     });
-    res.json(generateAuditBlink(req.query.address as string));
+    res.json(generateAuditBlink(req.query.address));
   });
 
   app.post("/api/actions/audit", (req, res) => {
