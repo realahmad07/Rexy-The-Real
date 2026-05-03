@@ -47,6 +47,15 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
+  // Injection for client side runtime env vars (since docker build omits them)
+  app.get("/api/env.js", (req, res) => {
+    res.type('application/javascript');
+    const envVars = {
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+    };
+    res.send(`window.__ENV__ = ${JSON.stringify(envVars)};`);
+  });
+
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ 

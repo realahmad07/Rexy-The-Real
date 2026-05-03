@@ -15,6 +15,7 @@ function getAi(apiKey: string) {
 export async function performAudit(contractCode: string, isQuantumAttack: boolean = false): Promise<AuditReport | null> {
   // Check multiple sources for the API key to handle different deployment environments
   const apiKey = 
+    (typeof window !== "undefined" && (window as any).__ENV__?.GEMINI_API_KEY) ||
     process.env.GEMINI_API_KEY || 
     (import.meta as any).env?.VITE_GEMINI_API_KEY ||
     (import.meta as any).env?.GEMINI_API_KEY;
@@ -161,6 +162,7 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
 
 export async function chatWithRexy(message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[] = []): Promise<string> {
   const apiKey = 
+    (typeof window !== "undefined" && (window as any).__ENV__?.GEMINI_API_KEY) ||
     process.env.GEMINI_API_KEY || 
     (import.meta as any).env?.VITE_GEMINI_API_KEY ||
     (import.meta as any).env?.GEMINI_API_KEY;
