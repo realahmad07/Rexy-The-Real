@@ -1,5 +1,5 @@
-# Use Node.js 20 lightweight image
-FROM node:20-alpine AS builder
+# Use Node.js standard image to ensure native dependencies (like solana web3) can compile
+FROM node:20 AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
