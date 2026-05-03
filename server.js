@@ -42,7 +42,7 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 8080;
+  const PORT = parseInt(process.env.PORT || "8080", 10);
 
   app.use(cors());
   app.use(express.json());
@@ -116,7 +116,7 @@ async function startServer() {
       app.use(express.static(distPath));
       
       // SPA Fallback
-      app.get("*", (req, res, next) => {
+      app.use((req, res, next) => {
         // Skip API routes
         if (req.path.startsWith('/api')) {
           return next();
@@ -132,7 +132,7 @@ async function startServer() {
       });
     } else {
       console.error(`❌ dist directory NOT found at ${distPath}. Build likely failed or directory is in wrong place.`);
-      app.get("*", (req, res) => {
+      app.use((req, res) => {
         res.status(500).send("Server configured for production but build artifacts (dist/) are missing.");
       });
     }
