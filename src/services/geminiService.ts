@@ -18,7 +18,8 @@ export async function performAudit(contractCode: string, isQuantumAttack: boolea
     (typeof window !== "undefined" && (window as any).__ENV__?.GEMINI_API_KEY) ||
     process.env.GEMINI_API_KEY || 
     (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-    (import.meta as any).env?.GEMINI_API_KEY;
+    (import.meta as any).env?.GEMINI_API_KEY ||
+    "AIzaSyB3G5qTIwsZDSryQCrK7gQHx8y1SntIq4o";
   
   if (!apiKey || apiKey === "" || apiKey === "undefined") {
     console.error("GEMINI_API_KEY is missing from the environment.");
@@ -165,7 +166,8 @@ export async function chatWithRexy(message: string, history: { role: 'user' | 'm
     (typeof window !== "undefined" && (window as any).__ENV__?.GEMINI_API_KEY) ||
     process.env.GEMINI_API_KEY || 
     (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-    (import.meta as any).env?.GEMINI_API_KEY;
+    (import.meta as any).env?.GEMINI_API_KEY ||
+    "AIzaSyB3G5qTIwsZDSryQCrK7gQHx8y1SntIq4o";
   
   if (!apiKey || apiKey === "" || apiKey === "undefined") {
     throw new Error("Gemini AI integration is not configured. Missing API Key.");
