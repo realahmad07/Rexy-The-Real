@@ -4,13 +4,7 @@ import { Terminal, Send, Cpu, Zap, Activity, Shield, Code, Loader2 } from 'lucid
 import ReactMarkdown from 'react-markdown';
 import { chatWithRexy } from '../services/geminiService';
 import { cn } from '../lib/utils';
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'model';
-  content: string;
-  timestamp: number;
-}
+import { useAppState, ChatMessage } from '../contexts/AppStateContext';
 
 interface PriceData {
   [key: string]: {
@@ -20,12 +14,7 @@ interface PriceData {
 }
 
 export default function CopilotView() {
-  const [messages, setMessages] = useState<ChatMessage[]>([{
-    id: 'intro',
-    role: 'model',
-    content: "Hey there! I'm Rexy, your AI Solana Security Copilot. Need help patching an Anchor vulnerability, understanding post-quantum mitigation, or analyzing a smart contract snippet? Drop it below.",
-    timestamp: Date.now()
-  }]);
+  const { copilotMessages: messages, setCopilotMessages: setMessages } = useAppState();
   
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);

@@ -7,19 +7,24 @@ import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { requestPayment, recordAuditOnChain } from '../services/solanaService';
+import { useAppState } from '../contexts/AppStateContext';
 
 const AuditView: React.FC = () => {
   const { connected } = useWallet();
   const wallet = useWallet();
   const { connection } = useConnection();
-  const [code, setCode] = useState('');
-  const [address, setAddress] = useState('');
+  
+  const { 
+    auditCode: code, setAuditCode: setCode,
+    auditAddress: address, setAuditAddress: setAddress,
+    auditReport: report, setAuditReport: setReport,
+    isSimulation, setIsSimulation,
+    isQuantumSimulation, setIsQuantumSimulation
+  } = useAppState();
+
   const [loading, setLoading] = useState(false);
   const [fetchingCode, setFetchingCode] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [isSimulation, setIsSimulation] = useState(false);
-  const [isQuantumSimulation, setIsQuantumSimulation] = useState(false);
-  const [report, setReport] = useState<AuditReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFetchCode = async () => {
