@@ -16,10 +16,6 @@ interface AppStateContextType {
   setAuditAddress: (val: string) => void;
   auditReport: AuditReport | null;
   setAuditReport: (val: AuditReport | null) => void;
-  isSimulation: boolean;
-  setIsSimulation: (val: boolean) => void;
-  isQuantumSimulation: boolean;
-  setIsQuantumSimulation: (val: boolean) => void;
 
   // Copilot View State
   copilotMessages: ChatMessage[];
@@ -32,8 +28,6 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [auditCode, setAuditCode] = useState('');
   const [auditAddress, setAuditAddress] = useState('');
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
-  const [isSimulation, setIsSimulation] = useState(false);
-  const [isQuantumSimulation, setIsQuantumSimulation] = useState(false);
 
   const [copilotMessages, setCopilotMessages] = useState<ChatMessage[]>([{
     id: 'intro',
@@ -47,8 +41,6 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
       auditCode, setAuditCode,
       auditAddress, setAuditAddress,
       auditReport, setAuditReport,
-      isSimulation, setIsSimulation,
-      isQuantumSimulation, setIsQuantumSimulation,
       copilotMessages, setCopilotMessages
     }}>
       {children}

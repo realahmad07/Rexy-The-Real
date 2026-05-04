@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Info, Cpu, Zap, Shield, User, Github, Twitter, Globe, Code2, Rocket, Activity, Users, Lock, ChevronRight, Award } from 'lucide-react';
+import { Info, Cpu, Zap, Shield, User, Github, Twitter, Globe, Code2, Rocket, Activity, Users, Lock, ChevronRight, Award, Wallet, Search, CheckCircle, Database } from 'lucide-react';
 
 const InfoView: React.FC = () => {
   const roadmap = [
@@ -17,7 +17,7 @@ const InfoView: React.FC = () => {
       phase: "Phase 2",
       status: "Under Dev",
       title: "Rexy Sentinel Agents",
-      description: "24/7 autonomous monitoring for deployed mainnet contracts. (Beta Preview Live)",
+      description: "24/7 autonomous monitoring for deployed mainnet contracts.",
       icon: Activity,
       color: "text-rexy-primary",
       bgColor: "bg-rexy-primary/10"
@@ -66,25 +66,108 @@ const InfoView: React.FC = () => {
             </p>
           </div>
 
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-rexy-primary to-rexy-secondary rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative bg-rexy-bg border border-rexy-border rounded-2xl overflow-hidden shadow-2xl">
-              <div className="px-4 py-2 border-b border-rexy-border bg-rexy-card flex items-center justify-between">
-                <span className="text-[10px] font-black text-rexy-primary uppercase tracking-widest">Powered by Solana</span>
-                <div className="flex gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-red-500/20" />
-                  <div className="w-2 h-2 rounded-full bg-amber-500/20" />
-                  <div className="w-2 h-2 rounded-full bg-emerald-500/20" />
+          <div className="flex flex-col gap-6 w-full h-full justify-center">
+            {/* Video 1: Platform Overview */}
+            <div className="relative group w-full">
+              <div className="absolute -inset-1 bg-gradient-to-r from-rexy-primary to-rexy-secondary rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+              <div className="relative bg-black border border-rexy-border rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                <div className="px-4 py-3 border-b border-rexy-border/50 bg-slate-900 flex items-center justify-between z-10 relative">
+                  <span className="text-[10px] font-black text-rexy-primary uppercase tracking-widest flex items-center gap-2">
+                    <Activity className="w-3 h-3" />
+                    Platform Overview
+                  </span>
+                  <div className="flex gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-red-500/50" />
+                    <div className="w-2 h-2 rounded-full bg-amber-500/50" />
+                    <div className="w-2 h-2 rounded-full bg-emerald-500/50" />
+                  </div>
                 </div>
+                <video 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline
+                  preload="auto"
+                  className="w-full aspect-video object-cover"
+                >
+                  <source src="/Backend.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
               </div>
-              <video 
-                src="/Backend.mp4" 
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-                className="w-full aspect-video object-cover"
-              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* App Features and Engine Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* App Features */}
+        <div className="bg-rexy-card border border-rexy-border rounded-3xl p-8 shadow-xl">
+          <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3">
+            <CheckCircle className="w-6 h-6 text-emerald-500" />
+            App Features
+          </h3>
+          <div className="space-y-6">
+            <div className="flex gap-4">
+              <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center shrink-0">
+                <Search className="w-6 h-6 text-emerald-500" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1">Instant Code Audits</h4>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Paste your Solana (Rust/Anchor) code and receive immediate AI-powered vulnerability scans, highlighting potential exploits.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center shrink-0">
+                <Activity className="w-6 h-6 text-indigo-500" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1">Interactive Fixes</h4>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Rexy doesn't just list issues; it generates patched code with syntax-highlighted diffs that you can copy in one click.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center shrink-0">
+                <Database className="w-6 h-6 text-purple-500" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1">On-Chain Proofs & cNFTs</h4>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Hash your audited contract and securely record its proof onto the Solana blockchain. Mint standard cNFTs to verify security compliance.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Engine We Are Using */}
+        <div className="bg-rexy-card border border-rexy-border rounded-3xl p-8 shadow-xl">
+          <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3">
+            <Cpu className="w-6 h-6 text-indigo-500" />
+            The AI Engine
+          </h3>
+          <div className="space-y-6">
+            <div className="p-6 bg-indigo-500/5 rounded-2xl border border-indigo-500/20">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-bold text-slate-900">Gemini 1.5 Pro</h4>
+                <span className="px-2 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase rounded-lg">Core Backend</span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                We leverage Google's state-of-the-art Gemini 1.5 Pro model for deep static analysis. With its massive 1M+ token context window, it can review massive codebases in a single pass, understanding the relationships between thousands of files at once.
+              </p>
+            </div>
+            <div className="p-6 bg-slate-100 rounded-2xl border border-slate-200">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-bold text-slate-900">Custom System Prompts</h4>
+                <span className="px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-lg">Fine-tuned</span>
+              </div>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                The engine is heavily injected with custom prompt constraints focusing exclusively on the Solana Sealevel execution environment, Anchor frameworks, and known PDA/Signer exploits.
+              </p>
             </div>
           </div>
         </div>
@@ -114,9 +197,9 @@ const InfoView: React.FC = () => {
                 <Zap className="w-6 h-6 text-rexy-primary" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 mb-1">High Throughput</h4>
+                <h4 className="font-bold text-slate-900 mb-1">High Throughput & Low Fees</h4>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  With 65k+ TPS, security must be as fast as the network. Rexy provides sub-second analysis to match Solana's speed.
+                  With 65k+ TPS and fractions of a cent in fees, security must be scalable. Solana allows us to record audit proofs securely and mint cNFTs extremely cheaply.
                 </p>
               </div>
             </div>
@@ -125,50 +208,46 @@ const InfoView: React.FC = () => {
                 <Shield className="w-6 h-6 text-amber-500" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 mb-1">Anchor Framework</h4>
+                <h4 className="font-bold text-slate-900 mb-1">Anchor Framework Ready</h4>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  We provide deep support for Anchor/Rust, detecting common pitfalls like missing signer checks and PDA validation errors.
+                  We provide deep support for Anchor/Rust, detecting common pitfalls like missing signer checks and PDA validation errors native to Solana development.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Pricing Section */}
+        {/* Why Phantom Section */}
         <div className="bg-rexy-card border border-rexy-border rounded-3xl p-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-[0.05] pointer-events-none">
-            <Award className="w-48 h-48 text-rexy-primary" />
+            <Wallet className="w-48 h-48 text-purple-500" />
           </div>
           
           <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3">
-            <Award className="w-6 h-6 text-rexy-primary" />
-            Pricing Model
+            <Wallet className="w-6 h-6 text-purple-500" />
+            Why Phantom?
           </h3>
           
           <div className="space-y-6 relative z-10">
-            <div className="p-6 bg-rexy-bg/50 rounded-2xl border border-rexy-border">
+            <p className="text-sm text-slate-600 leading-relaxed mb-4">
+              We exclusively chose Phantom Wallet because it's widely adopted as the most trusted, secure, and user-friendly wallet for the Solana ecosystem.
+            </p>
+            <div className="p-6 bg-purple-500/5 rounded-2xl border border-purple-500/20">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-bold text-slate-900">Initial AI Audit</h4>
-                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase rounded-lg">Free</span>
+                <h4 className="font-bold text-slate-900">Seamless Authentication</h4>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Scan your smart contracts for vulnerabilities at no cost. You only pay the standard Solana network gas fee via the Memo Program to record your audit intent.
+                Connect once to unlock the full potential of Rexy. Pay standard minimum gas fees seamlessly from Phantom without leaving the app.
               </p>
             </div>
 
-            <div className="p-6 bg-rexy-primary/5 rounded-2xl border border-rexy-primary/20">
+            <div className="p-6 bg-purple-500/5 rounded-2xl border border-purple-500/20">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-bold text-slate-900">cNFT Audit Certificate</h4>
-                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase rounded-lg">Free</span>
+                <h4 className="font-bold text-slate-900">Secure Audit Signing</h4>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Mint a permanent, verifiable "Verified" status badge as a compressed NFT. You only pay the standard Solana network gas fee for the minting transaction.
+                Use Phantom to mathematically sign your smart contract audit proofs. The wallet ensures you're authorizing exactly what you see.
               </p>
-            </div>
-
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 italic">
-              <Info className="w-3 h-3" />
-              <span>Fees are used to maintain the AI infrastructure and secure the network.</span>
             </div>
           </div>
         </div>
@@ -187,18 +266,27 @@ const InfoView: React.FC = () => {
           </h3>
           
           <div className="flex flex-col items-center text-center py-4">
-            <div className="w-24 h-24 bg-gradient-to-br from-rexy-primary to-rexy-secondary rounded-3xl flex items-center justify-center text-white font-black text-4xl mb-6 shadow-2xl shadow-rexy-primary/20">
-              AH
+            <div className="relative">
+              <div className="absolute inset-0 bg-rexy-primary/20 blur-xl rounded-full"></div>
+              {/* Using standard img tag. For the user: Just upload your real developer image locally or use link. Using the provided pic context. */}
+              <img 
+                src="/developer-dp.jpg" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad';
+                }}
+                alt="Ahmad Hassan" 
+                className="relative w-32 h-32 rounded-full object-cover mb-4 ring-4 ring-rexy-primary/30 shadow-2xl z-10 bg-slate-100"
+              />
             </div>
             <h4 className="text-2xl font-black text-slate-900 mb-1">Ahmad Hassan</h4>
-            <p className="text-rexy-primary font-bold uppercase tracking-[0.2em] text-[10px] mb-6">Full-Stack Blockchain Engineer</p>
+            <p className="text-rexy-primary font-bold uppercase tracking-[0.2em] text-[10px] mb-4">Visionary Full-Stack Blockchain Engineer</p>
             
-            <p className="text-sm text-slate-600 max-w-sm mb-8 leading-relaxed">
-              Ahmad is a passionate developer focused on building secure infrastructure for the decentralized web. 
-              With a deep background in Rust and React, he built Rexy to empower the next generation of Solana builders.
+            <p className="text-sm text-slate-600 max-w-lg mb-8 leading-relaxed">
+              Ahmad is a passionate developer focused on building secure, robust, and scalable infrastructure for the decentralized web. 
+              As the sole creator of the Rexy platform, he combined deep expertise in Rust and frontend engineering to empower the next generation of Solana builders. 
             </p>
             
-            <div className="flex gap-4">
+            <div className="flex gap-4 relative z-10">
               <button className="p-3 bg-slate-100 hover:bg-rexy-primary hover:text-white rounded-xl transition-all text-slate-600">
                 <Github className="w-5 h-5" />
               </button>

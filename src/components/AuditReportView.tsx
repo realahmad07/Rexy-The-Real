@@ -25,7 +25,6 @@ interface AuditReportViewProps {
   report: AuditReport;
   onApplyFix: () => void;
   currentUser: any;
-  isSimulation?: boolean;
 }
 
 const IssueItem: React.FC<{ issue: AuditIssue; index: number; onCopy: (code: string) => void }> = ({ issue, index, onCopy }) => {
@@ -270,7 +269,7 @@ const ScoreMeter: React.FC<{ score: number }> = ({ score }) => {
   );
 };
 
-export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onApplyFix, currentUser, isSimulation }) => {
+export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onApplyFix, currentUser }) => {
   const { connection } = useConnection();
   const wallet = useWallet();
   const { stakeCertificate } = useRexyRegistry();
@@ -282,7 +281,6 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const [certificateSignature, setCertificateSignature] = useState<string | null>(report.certificateSignature || null);
   const [copied, setCopied] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
-  const [localSimulation, setLocalSimulation] = useState(isSimulation || false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
   const [isApplyingFixes, setIsApplyingFixes] = useState(false);
   const [fixProgress, setFixProgress] = useState(0);
@@ -301,25 +299,21 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const risk = getRiskLevel(report.score);
 
   const handleRecordOnChain = async () => {
-    if (!localSimulation && (!wallet.publicKey || !wallet.sendTransaction)) {
+    if (!wallet.publicKey || !wallet.sendTransaction) {
       showNotification("Please connect your wallet to record proof on-chain.", "error");
       return;
     }
     setIsRecordingOnChain(true);
     try {
       let signature = "";
-      if (localSimulation) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        signature = "sim_proof_" + Math.random().toString(36).substring(7);
-      } else {
-        const { recordAuditOnChain } = await import('../services/solanaService');
-        signature = await recordAuditOnChain(wallet, report.codeHash || 'unknown', report.score, connection);
-      }
+      const { recordAuditOnChain } = await import('../services/solanaService');
+      signature = await recordAuditOnChain(wallet, report.codeHash || 'unknown', report.score, connection);
+      
       setOnChainProofSig(signature);
       if (report.id) {
         await updateDoc(doc(db, 'audits', report.id), { onChainProof: signature });
       }
-      showNotification(isSimulation ? "Simulated audit proof recorded successfully!" : "Audit proof recorded on Solana blockchain successfully!", "success");
+      showNotification("Audit proof recorded on Solana blockchain successfully!", "success");
     } catch (err: any) {
       showNotification(err.message || "Failed to record proof on-chain.", "error");
     } finally {
@@ -328,24 +322,19 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   };
 
   const handleMint = async () => {
-    if (!localSimulation && !wallet.publicKey) {
+    if (!wallet.publicKey) {
       showNotification("Please connect your wallet to mint a certificate.", "error");
       return;
     }
     setIsMinting(true);
     try {
       let result;
-      if (localSimulation) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        result = { mint: "sim_cert_" + Math.random().toString(36).substring(7) };
-      } else {
-        const { mintAuditCertificate } = await import('../services/solanaService');
-        result = await mintAuditCertificate(wallet, {
-          id: report.id || report.codeHash || 'unknown',
-          score: report.score,
-          name: report.contractName || 'Unnamed Contract'
-        }, connection);
-      }
+      const { mintAuditCertificate } = await import('../services/solanaService');
+      result = await mintAuditCertificate(wallet, {
+        id: report.id || report.codeHash || 'unknown',
+        score: report.score,
+        name: report.contractName || 'Unnamed Contract'
+      }, connection);
       setCertificateMint(result.mint);
       setCertificateSignature(result.signature || null);
       if (report.id) {
@@ -354,7 +343,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
           certificateSignature: result.signature || null
         });
       }
-      showNotification(isSimulation ? "Simulated cNFT Certificate minted successfully!" : "cNFT Audit Certificate minted successfully!", "success");
+      showNotification("cNFT Audit Certificate minted successfully!", "success");
     } catch (err: any) {
       showNotification(err.message || "Failed to mint certificate.", "error");
     } finally {
@@ -597,44 +586,93 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
         </div>
       </div>
 
-      {/* ACTION BAR */}
-      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-slate-100 bg-slate-50/30">
+      {/* EXPORT ACTION BAR */}
+      <div className="grid grid-cols-1 md:grid-cols-2 border-b border-slate-100 bg-white">
         <button 
           onClick={handleExportPDF}
-          className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group"
+          className="p-6 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-slate-50 transition-all group"
         >
           <FileText className="w-5 h-5 text-slate-400 group-hover:text-rexy-primary transition-colors" />
           <span className="text-xs font-black uppercase tracking-widest text-slate-600">Download PDF Report</span>
         </button>
         <button 
           onClick={handleShareBlink}
-          className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group"
+          className="p-6 flex items-center justify-center gap-4 hover:bg-slate-50 transition-all group"
         >
           <Share2 className="w-5 h-5 text-slate-400 group-hover:text-rexy-primary transition-colors" />
           <span className="text-xs font-black uppercase tracking-widest text-slate-600">{copied ? "Link Copied" : "Share via Blink"}</span>
         </button>
-        {/* NEW: Staking Button */}
+      </div>
+
+      {/* BLOCKCHAIN ACTION BAR */}
+      <div className="grid grid-cols-1 md:grid-cols-3 border-b border-slate-100 bg-slate-50/30">
+        {onChainProofSig ? (
+          <a
+            href={`https://solscan.io/tx/${onChainProofSig}${getClusterParam()}`}
+            target="_blank"
+            rel="noreferrer"
+            className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"
+          >
+            <CheckCircle className="w-5 h-5 text-emerald-500" />
+            <span className="text-xs font-black uppercase tracking-widest text-emerald-600">
+              Proof Recorded <ExternalLink className="w-3 h-3 inline ml-1 mb-0.5" />
+            </span>
+          </a>
+        ) : (
+          <button 
+            onClick={handleRecordOnChain}
+            disabled={isRecordingOnChain}
+            className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group"
+          >
+            {isRecordingOnChain ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <Hash className="w-5 h-5 text-slate-400 group-hover:text-rexy-primary transition-colors" />}
+            <span className="text-xs font-black uppercase tracking-widest text-slate-600">1. Record Proof On-Chain</span>
+          </button>
+        )}
+
+        {certificateMint ? (
+          <a
+            href={`https://solscan.io/token/${certificateMint}${getClusterParam()}`}
+            target="_blank"
+            rel="noreferrer"
+            className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"
+          >
+            <Award className="w-5 h-5 text-emerald-500" />
+            <span className="text-xs font-black uppercase tracking-widest text-emerald-600">
+              cNFT Minted <ExternalLink className="w-3 h-3 inline ml-1 mb-0.5" />
+            </span>
+          </a>
+        ) : (
+          <button 
+            onClick={handleMint}
+            disabled={isMinting || !onChainProofSig}
+            className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isMinting ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <Award className="w-5 h-5 text-slate-400 group-hover:text-rexy-primary transition-colors" />}
+            <span className="text-xs font-black uppercase tracking-widest text-slate-600">2. Mint cNFT Certificate</span>
+          </button>
+        )}
+
         {stakedProofSig ? (
           <a
             href={`https://solscan.io/tx/${stakedProofSig}${getClusterParam()}`}
             target="_blank"
             rel="noreferrer"
-            className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group border-l border-slate-100 bg-emerald-50/30"
+            className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"
           >
             <DollarSign className="w-5 h-5 text-emerald-500" />
             <span className="text-xs font-black uppercase tracking-widest text-emerald-600">
-              Staked 0.001 SOL <ExternalLink className="w-3 h-3 inline ml-1 mb-0.5" />
+              Bond Staked <ExternalLink className="w-3 h-3 inline ml-1 mb-0.5" />
             </span>
           </a>
         ) : (
           <button 
             onClick={async () => {
-               setIsRecordingOnChain(true);
+               setIsRecordingOnChain(true); // Using this as loading state
                try {
                   const result = await stakeCertificate({ programIdAudited: report.contractName });
                   if (result.success) {
                      setStakedProofSig(result.signature || null);
-                     if (report.id && !isSimulation) {
+                     if (report.id) {
                        try {
                          await updateDoc(doc(db, 'audits', report.id), { stakedProofSig: result.signature });
                        } catch (e) {
@@ -651,11 +689,11 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
                   setIsRecordingOnChain(false);
                }
             }}
-            disabled={isRecordingOnChain}
-            className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group border-l border-slate-100"
+            disabled={isRecordingOnChain || !certificateMint}
+            className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRecordingOnChain ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <DollarSign className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />}
-            <span className="text-xs font-black uppercase tracking-widest text-slate-600">Stake Security Bond (0.001 SOL)</span>
+            <span className="text-xs font-black uppercase tracking-widest text-slate-600">3. Stake Bond (0.001 SOL)</span>
           </button>
         )}
       </div>

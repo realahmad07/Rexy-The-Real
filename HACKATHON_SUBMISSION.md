@@ -1,48 +1,48 @@
-# Rexy AI Auditor - Solana Hackathon Submission
+# Rexy AI Auditor - Solana Colosseum Hackathon Submission
 
 ## 🛡️ Project Overview
-Rexy is an AI-powered smart contract security layer designed to provide real-time vulnerability detection, automated patching, and on-chain verification for the **Solana (Anchor/Rust)** ecosystem. It bridges the gap between complex security audits and rapid development by providing production-ready fixes and immutable on-chain proofs.
+Rexy is an AI-powered smart contract security layer designed to provide real-time vulnerability detection, automated patching, AI-assisted copilot discussions, and on-chain verification for the **Solana (Anchor/Rust)** ecosystem. It bridges the gap between complex security audits and rapid development by providing production-ready fixes and immutable on-chain proofs.
 
 ## 🚀 Key Features (Hackathon "Win Factors")
-- **Secure Full-Stack Architecture**: Unlike simple wrappers, Rexy uses a **Secure Backend Proxy** to handle AI requests, protecting sensitive API keys and enabling server-side validation.
-- **Multi-Stage AI Analysis Engine**: Includes a Static Analysis Engine, Rule-Based Detection, Logic Flow Analyzer, and an **Attack Simulation Engine** that provides step-by-step exploit explanations.
-- **Multi-Chain AI Auditor**: Rexy now automatically detects and audits both **Solana (Anchor/Rust)** and **Solidity (EVM)** smart contracts.
-- **On-Chain Audit Proofs**: Every audit result is recorded on the Solana blockchain using the **Memo Program**, providing immutable, verifiable proof of security.
-- **cNFT Audit Certificates**: Users can mint **Compressed NFTs** as "Verified" status badges for their contracts, leveraging Solana's unique scaling technology for ultra-low-cost, permanent trust signals.
-- **Gas-Optimized Transactions**: Custom **Compute Budget** management ensures transactions are both cheap and reliable, even during network congestion.
-- **Real-Time Threat Monitoring (Phase 2 Preview)**: Integrated with **Helius Webhooks** to monitor deployed contracts for suspicious transactions. Currently in **Beta (Under Development)** with a live system preview.
+- **Double Layer Security Architecture**: Rexy employs a rigorous two-step verification process. Every contract first runs against our custom **Solana Vulnerability Library** (static analysis rules) to catch known exploits instantly, before being passed to Gemini for deep semantic reasoning.
+- **Secure Full-Stack Architecture**: Rexy uses a **Secure Backend Proxy** to handle AI requests, protecting sensitive API keys and safely evaluating AI inputs.
+- **Gemini 1.5 Pro Driven**: Massive context capabilities allowing the engine to parse large multi-file Anchor projects and detect logical exploits beyond simple linting.
+- **On-Chain Audit Proofs & Certificate Staking**: Every audit result is recorded on the Solana blockchain. Users can mint **Compressed NFTs** as verified badges, and further **Stake their verification** into an on-chain registry, creating a zero-trust network of audited contract proofs.
+- **Interactive AI Copilot**: A built-in chat agent powered by Gemini, allowing developers to converse with their code, ask about specific patches, or request post-quantum migration strategies.
+- **Real Transactions (No "Demo" Toggles)**: A strict commitment to authentic blockchain interaction. Users "Pay AND Start" their audit, interacting with Phantom wallet immediately rather than relying on mocked flows.
 - **Audit by Address**: UX-first approach allowing users to fetch contract source code directly from a Solana address via RPC/Helius.
-- **AI-Powered Patching**: One-click "Apply All Fixes" feature that generates secure, production-ready code using **Gemini 1.5 Pro**.
+- **AI-Powered Patching**: One-click "Apply All Fixes" feature that generates secure, production-ready code with syntax-highlighted diffs.
 
 ## 🛠️ Technical Stack
-- **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion.
-- **AI Engine**: Google Gemini 1.5 Pro (Optimized for deep code reasoning).
-- **Blockchain**: Solana Web3.js, @solana/wallet-adapter, Memo Program, cNFTs.
-- **Infrastructure**: Helius RPC & Digital Asset API, Firebase (Firestore/Auth).
+- **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion, Zustand/Context API.
+- **AI Engine**: Google Gemini 1.5 Pro (Optimized for deep code reasoning and conversational AI).
+- **Blockchain**: Solana Web3.js, @solana/wallet-adapter, @solana-developers/helpers, Phantom Wallet.
+- **Data & Auth**: Firebase (Firestore/Auth) for user audit history tracking.
 
-## 💰 Pricing Model
-- **Initial AI Audit**: **FREE** (User only pays the standard Solana network gas fee via the Memo Program).
-- **cNFT Audit Certificate**: **FREE** (Only standard gas fees apply to receive the "Verified" status badge).
+## 💰 Integrated Payment Flow
+- **Pay AND Start**: Users seamlessly connect their Phantom wallet and pay a transaction fee up front to authorize the audit and record intent on-chain.
+- **cNFT Minting & Staking**: Interactions with our smart contracts for minting compressed NFTs or staking proofs are charged standard network operations fees, preserving a highly scalable business model.
 
 ## 📖 How to Run the Demo
-1. **Connect Wallet**: Click "Select Wallet" in the header. Connect your **Phantom** wallet (set to **Devnet**).
+1. **Connect Wallet**: Click "Connect Wallet" in the header. Connect your **Phantom** wallet.
 2. **Fetch or Paste Code**: Enter a Solana address to fetch code or paste your Rust/Anchor program directly.
-3. **Pay Gas & Audit**: Click "Pay Gas & Start AI Audit". This triggers a real transaction (0 SOL + gas) with **Priority Fees** to record your audit intent.
-4. **Record Proof**: Once the audit is done, click "Record Proof On-Chain" to store the hash and score on Solana.
-5. **Mint Certificate**: Click "Mint Certificate" to receive your on-chain "Verified" security badge.
+3. **Pay AND Start**: Click "Pay AND Start". This triggers a real transaction to record your audit intent securely via Phantom.
+4. **Chat with Copilot**: While analyzing, ask Rexy about security practices.
+5. **Record & Mint**: Once the audit is done, click "Record Proof On-Chain" and "Mint Certificate" to receive your badge.
+6. **Stake the Proof**: Finalize by staking the audit hash onto the blockchain registry for public verification.
 
-## 🏆 Hackathon Submission Details
+## 🏆 Hackathon Submission Details (Colosseum)
 - **Project Name**: Rexy AI Auditor
-- **Category**: Infrastructure & Tooling / Security / AI
+- **Category**: Infrastructure & Tooling / Security / AI / Developer Tools
 - **Submission Link**: [Your Hackathon URL]
 - **Demo Video**: [Link to your Loom/YouTube demo]
 - **GitHub Repository**: [Link to your repo]
 
 ## 📝 Future Roadmap (Elite Rexy V2)
-- **Phase 1 (Current)**: Multi-Chain AI Audits (Solana & Solidity), cNFT Certificates, and On-Chain Proof of Intent.
-- **Phase 2 (Q3 2026)**: **Rexy Sentinel Agents** – 24/7 autonomous monitoring for deployed mainnet contracts. (Currently in **Beta / Under Development**).
-- **Phase 3 (Q4 2026)**: **The Verification Marketplace** – Connecting AI reasoning with top-tier human security researchers for "Human-Certified" stamps.
-- **Phase 4 (2027)**: **ZK-Proof of Inference** – Bringing absolute mathematical certainty to AI-driven security.
+- **Phase 1 (Current)**: High-Depth AI Audits, AI Copilot, cNFT Certificates, Staking, and On-Chain Proofs.
+- **Phase 2 (Late 2026)**: **Rexy Sentinel Agents** – 24/7 autonomous threat monitoring for deployed mainnet contracts actively tracing transactions.
+- **Phase 3 (2027)**: **The Verification Marketplace** – Connecting AI reasoning with top-tier human security researchers for "Human-Certified" stamps.
+- **Phase 4 (2028)**: **ZK-Proof of Inference** – Bringing absolute mathematical certainty to AI-driven security results.
 
 ---
-*Built with ❤️ for the Solana Hackathon*
+*Built with ❤️ for Solana Colosseum*

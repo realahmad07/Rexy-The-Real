@@ -18,8 +18,6 @@ const AuditView: React.FC = () => {
     auditCode: code, setAuditCode: setCode,
     auditAddress: address, setAuditAddress: setAddress,
     auditReport: report, setAuditReport: setReport,
-    isSimulation, setIsSimulation,
-    isQuantumSimulation, setIsQuantumSimulation
   } = useAppState();
 
   const [loading, setLoading] = useState(false);
@@ -51,13 +49,8 @@ const AuditView: React.FC = () => {
   const handleAudit = async () => {
     let auditCode = code.trim();
     
-    if (isSimulation && !auditCode) {
-      auditCode = `// Rexy Simulation Contract\nuse anchor_lang::prelude::*;\n\ndeclare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");\n\n#[program]\npub mod simulation_contract {\n    use super::*;\n    pub function initialize(ctx: Context<Initialize>) -> Result<()> {\n        Ok(())\n    }\n}`;
-      setCode(auditCode);
-    }
-
     if (!auditCode) return;
-    if (!isSimulation && (!connected || !wallet.publicKey)) {
+    if (!connected || !wallet.publicKey) {
       setError("Please connect your Phantom wallet first.");
       return;
     }
@@ -66,24 +59,19 @@ const AuditView: React.FC = () => {
     setPaymentProcessing(true);
     
     try {
-      let signature = "simulated_proof_" + Math.random().toString(36).substring(7);
+      let signature = "";
       
-      if (!isSimulation) {
-        // Step 1: Request Payment (Minimal fee for Mainnet testing)
-        console.log("Requesting audit payment (0.00001 SOL)...");
-        signature = await requestPayment(wallet, 0.00001, connection);
-        console.log("Payment successful:", signature);
-      } else {
-        // Simulate delay for simulation mode
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+      // Step 1: Request Payment (Minimal fee for Mainnet testing)
+      console.log("Requesting audit payment (0.00001 SOL)...");
+      signature = await requestPayment(wallet, 0.00001, connection);
+      console.log("Payment successful:", signature);
       
       setPaymentProcessing(false);
       setLoading(true);
       setReport(null);
 
       // Step 2: Perform AI Audit
-      const result = await performAudit(auditCode, isQuantumSimulation);
+      const result = await performAudit(auditCode, false);
       if (result) {
         let finalSignature = signature;
         
@@ -93,7 +81,7 @@ const AuditView: React.FC = () => {
         };
 
         // Step 3: Record Proof On-Chain (Real proof with hash)
-        if (!isSimulation && connected && wallet.publicKey) {
+        if (connected && wallet.publicKey) {
           try {
             console.log("Recording audit proof on-chain...");
             const proofSignature = await recordAuditOnChain(wallet, result.id || "rexy_" + Date.now(), result.score, connection);
@@ -187,71 +175,20 @@ const AuditView: React.FC = () => {
               />
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
-              <div className="flex flex-col gap-3">
-                {/* NEW: Simulation Toggle */}
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <div className="relative">
-                    <input 
-                      type="checkbox" 
-                      checked={isSimulation}
-                      onChange={(e) => setIsSimulation(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-10 h-5 rounded-full transition-colors ${isSimulation ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isSimulation ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-emerald-500 transition-colors">
-                    Demo Mode (Mock Transactions)
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <div className="relative">
-                    <input 
-                      type="checkbox" 
-                      checked={isQuantumSimulation}
-                      onChange={(e) => setIsQuantumSimulation(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-10 h-5 rounded-full transition-colors ${isQuantumSimulation ? 'bg-purple-500' : 'bg-slate-200'}`} />
-                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isQuantumSimulation ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-purple-500 transition-colors flex items-center gap-1">
-                    Simulate Q-Day Attack <span className="opacity-50">(Quantum Readiness)</span>
-                  </span>
-                </label>
-                
-                {/* NEW: Simulation Toggle */}
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <div className="relative">
-                    <input 
-                      type="checkbox" 
-                      checked={isSimulation}
-                      onChange={(e) => setIsSimulation(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-10 h-5 rounded-full transition-colors ${isSimulation ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isSimulation ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-emerald-500 transition-colors">
-                    Demo Mode (Mock Transactions)
-                  </span>
-                </label>
-              </div>
               <div className="text-[9px] font-bold text-slate-400 italic self-end">
-                {isSimulation ? "Bypassing real transaction" : "Real on-chain proof"}
+                Real on-chain proof
               </div>
             </div>
 
             <button
               onClick={handleAudit}
-              disabled={loading || paymentProcessing || (!isSimulation && !code.trim())}
+              disabled={loading || paymentProcessing || !code.trim()}
               className="w-full py-4 bg-rexy-primary hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-black text-lg transition-all flex items-center justify-center space-x-2 shadow-lg shadow-rexy-primary/20 group uppercase tracking-widest"
             >
               {paymentProcessing ? (
                 <>
                   <Loader2 className="animate-spin" />
-                  <span>{isSimulation ? "Simulating Proof..." : "Processing Gas-Only Payment..."}</span>
+                  <span>Processing Payment...</span>
                 </>
               ) : loading ? (
                 <>
@@ -261,7 +198,7 @@ const AuditView: React.FC = () => {
               ) : (
                 <>
                   <ShieldAlert size={20} className="group-hover:scale-110 transition-transform" />
-                  <span>{isSimulation ? "Start AI Audit (Simulated)" : "Pay Gas & Start Audit"}</span>
+                  <span>Pay AND Start</span>
                 </>
               )}
             </button>
@@ -325,7 +262,6 @@ const AuditView: React.FC = () => {
           </div>
           <AuditReportView 
             report={report} 
-            isSimulation={isSimulation}
             onApplyFix={() => {
               if (report.fullFixedCode) {
                 setCode(report.fullFixedCode);

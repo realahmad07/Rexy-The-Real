@@ -4,7 +4,7 @@ import { Buffer } from "buffer";
 
 export async function performAudit(contractCode: string, isQuantumAttack: boolean = false): Promise<AuditReport | null> {
   const staticAnalysis = analyzeWithVulnLibrary(contractCode);
-
+  
   try {
     const response = await fetch("/api/gemini/audit", {
       method: "POST",
@@ -18,10 +18,12 @@ export async function performAudit(contractCode: string, isQuantumAttack: boolea
     }
 
     const reportData = await response.json();
+
     return {
       ...reportData,
       timestamp: Date.now(),
-      codeHash: Buffer.from(contractCode).toString('base64').substring(0, 16)
+      contractName: reportData.contractName || "UnknownContract",
+      staticAnalysis
     };
   } catch (error) {
     console.error("Gemini Audit Error:", error);
@@ -49,3 +51,4 @@ export async function chatWithRexy(message: string, history: { role: 'user' | 'm
     throw error;
   }
 }
+

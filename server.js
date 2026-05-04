@@ -3,6 +3,10 @@ import cors from "cors";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
+
+dotenv.config();
+
 // Inline blink service to keep server.js pure for "node server.js" without tsx
 const BLINK_CONFIG = {
   icon: 'https://picsum.photos/seed/sentinel-blink/400/400',
@@ -193,10 +197,6 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
 
       let response;
       if (history && history.length > 0) {
-        // Just send message; GoogleGenAI client chats typically manage conversation history
-        // if instantiated differently. For this single stateless endpoint, we pass the message.
-        // In a strictly correct scenario, we should recreate history or use generateContent.
-        // For simplicity, if history is provided we just run generateContent with formatted history
         const formattedContents = history.map((msg) => ({
           role: msg.role,
           parts: msg.parts
@@ -227,7 +227,9 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
     res.json({ 
       status: "ok", 
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || "development"
+      environment: process.env.NODE_ENV || "development",
+      hasKey: !!process.env.GEMINI_API_KEY,
+      keySnippet: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 8) : "none"
     });
   });
 
@@ -313,13 +315,6 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
     }
   } else {
     // Vite middleware for development
-    try {
-      const dotenv = await import("dotenv");
-      dotenv.config();
-    } catch {
-      // Ignored if dotenv is not available
-    }
-
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
