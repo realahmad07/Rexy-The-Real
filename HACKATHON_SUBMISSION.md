@@ -15,7 +15,7 @@ Rexy is an AI-powered smart contract security layer designed to provide real-tim
 
 ## 🛠️ Technical Stack
 - **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion, Zustand/Context API.
-- **AI Engine**: Google Gemini 1.5 Pro (Optimized for deep code reasoning and conversational AI).
+- **AI Engine**: Groq Llama-3 (Deep Brain Engine) & Google Gemini 1.5 Pro.
 - **Blockchain**: Solana Web3.js, @solana/wallet-adapter, @solana-developers/helpers, Phantom Wallet.
 - **Data & Auth**: Firebase (Firestore/Auth) for user audit history tracking.
 

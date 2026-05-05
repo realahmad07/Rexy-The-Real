@@ -76,12 +76,12 @@ const AuditView: React.FC = () => {
 
       // Step 2: Static Analysis (Solana Vulnerability Library)
       setAuditStage('static');
-      await new Promise(resolve => setTimeout(resolve, 3000)); // Show the stage
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Reduced from 3000ms
 
       // Step 3: AI Analysis (Deep Brain Engine)
       setAuditStage('ai');
       const result = await performAudit(auditCode, isQuantumAudit);
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Let the AI logs finish
+      await new Promise(resolve => setTimeout(resolve, 800)); // Reduced from 1500ms
       
       if (result) {
         let finalSignature = signature;

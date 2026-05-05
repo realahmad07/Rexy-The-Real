@@ -166,7 +166,7 @@ export default function CopilotView() {
              <Shield className="w-3 h-3" /> Copilot Status
            </h3>
            <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-             Connected to Gemini 3.1 Pro via secure tunnel. Ready to analyze Anchor structs, rust macros, and transaction logic.
+             Connected to Groq Llama-3 (Deep Brain Engine). Layered with Gemini 1.5 Pro for deep semantic reasoning.
            </p>
         </div>
       </div>

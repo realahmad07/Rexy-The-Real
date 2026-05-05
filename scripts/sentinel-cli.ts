@@ -26,8 +26,8 @@ async function runCI() {
   // 1. Load Contract Code
   const code = fs.readFileSync(path.resolve(contractPath), 'utf-8');
 
-  // 2. AI Audit (Gemini)
-  console.log("[Sentinel CI] Analyzing code with Gemini 1.5 Pro...");
+  // 2. AI Audit (Groq/Gemini)
+  console.log("[Sentinel CI] Analyzing code with Deep Brain Engine (Groq)...");
   const report = await performAudit(code);
 
   console.log(`[Sentinel CI] Audit Complete. Score: ${report.score}/100`);

@@ -6,7 +6,7 @@ Rexy AI Auditor is a cutting-edge, blockchain-verified security auditing platfor
 
 ### 1. Double Layer Security Architecture
 - **Layer 1: Solana Vulnerability Library**: Code is first passed through our native static analysis engine which contains hardcoded patterns for known Solana vulnerabilities (e.g., missing signer checks, PDA derivation flaws).
-- **Layer 2: AI Semantic Analysis**: Code is then deep-analyzed by Gemini 1.5 Pro to catch complex logical flaws that static analysis misses.
+- **Layer 2: AI Semantic Analysis**: Code is then deep-analyzed by Groq Llama-3 (and Gemini 1.5 Pro) to catch complex logical flaws that static analysis misses.
 
 ### 2. AI-Driven Security Engine (Groq Llama-3)
 - **Model**: Powered by **Groq Llama-3 (Deep Brain Engine)**, optimized for ultra-low latency code analysis and logical vulnerability detection.
@@ -54,7 +54,7 @@ Rexy AI Auditor is positioned as a premier **Infrastructure & Tooling** track co
 ### Why It Wins:
 1. **Real Utility in Web3 Security**: Solves the critical need for scalable, affordable, and immediate smart contract security checks prior to expensive manual audits.
 2. **Deep Technical Moat**: Integrates real Solana programs, cNFT minting (Metaplex/Helius), on-chain proof recording, and staking registries. No "demo" toggles—real transactions only.
-3. **Modern AI Implementations**: Employs Gemini 1.5 Pro to conduct semantic reasoning that traditional static analyzers cannot do.
+3. **Modern AI Implementations**: Employs Groq Llama-3 and Gemini 1.5 Pro to conduct semantic reasoning that traditional static analyzers cannot do.
 4. **Phantom-Native UX**: Specifically designed around Phantom wallet connectivity for frictionless security verifications and payments.
 
 ---
@@ -62,7 +62,7 @@ Rexy AI Auditor is positioned as a premier **Infrastructure & Tooling** track co
 ## 📦 Technical Stack
 - **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion.
 - **Blockchain**: `@solana/web3.js`, `@solana/wallet-adapter` (Phantom focused).
-- **AI**: `@google/genai` (Gemini 1.5 Pro) for Audits and Chat Copilot.
+- **AI**: Groq Llama-3 (Deep Brain Engine) and Gemini 1.5 Pro for Audits and Chat Copilot.
 - **Backend**: Express.js, Firebase Auth & Firestore.
 
 ---

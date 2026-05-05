@@ -169,7 +169,7 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-10 flex-1">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -185,6 +185,28 @@ const App: React.FC = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* Mini Footer / Health Bar */}
+      <footer className="mt-auto border-t border-rexy-border bg-rexy-card/30 py-6 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">
+              © 2026 Rexy Security Labs • All Audit Hash Proofs are Immutable on Solana
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-rexy-border shadow-sm">
+              <div className={`w-2 h-2 rounded-full animate-pulse transition-colors ${systemHealth === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span className={`text-[9px] font-black uppercase tracking-widest ${systemHealth === 'online' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                System Status: {systemHealth === 'online' ? 'Operational' : 'Degraded'}
+              </span>
+            </div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              v1.0.4-beta
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

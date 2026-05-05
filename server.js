@@ -46,7 +46,7 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = parseInt(process.env.PORT || "8080", 10);
+  const PORT = 3000;
 
   app.use(cors());
   app.use(express.json());
@@ -60,15 +60,10 @@ async function startServer() {
       }
 
       const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
-      const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_") && k.length > 20;
-      const activeGroqKey = isValidGroqKey(groqKey) ? groqKey : null;
+      const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI;
 
-      if (!activeGroqKey) {
-        return res.status(400).json({ 
-          error: "GROQ_API_KEY is missing or invalid. Please add a valid Groq API key (starts with gsk_) in Settings > Secrets.",
-          instruction: "Go to Settings (bottom left) -> Secrets -> Add Secret. Name it 'GROQ_API_KEY'."
-        });
-      }
+      const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_");
+      const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
 
       const systemInstruction = `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
 Your mission is to perform deep security audits on smart contracts using a multi-stage analysis engine.
@@ -111,7 +106,7 @@ Provide a detailed report in JSON format. Be critical but constructive.
 📊 SCORING ALGORITHM:
 - Start at 100 points.
 - Critical: -30 points each.
-- High: -20 points each.
+- High: -10 points each.
 - Medium: -10 points each.
 - Low: -3 points each.
 - Informational: -1 point each.
@@ -137,12 +132,10 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
       const crypto = await import("node:crypto");
       const codeHash = crypto.createHash('sha256').update(contractCode).digest('hex');
 
-      let reportData;
+      const auditWithGroq = async (key) => {
 
-      // Use Groq
-      try {
         const Groq = (await import("groq-sdk")).default;
-        const groq = new Groq({ apiKey: activeGroqKey });
+        const groq = new Groq({ apiKey: key });
         const completion = await groq.chat.completions.create({
           messages: [
             { role: "system", content: systemInstruction },
@@ -152,28 +145,61 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
           response_format: { type: "json_object" },
           temperature: 0.1
         });
-        const groqText = completion.choices[0].message.content || "{}";
-        try {
-          reportData = JSON.parse(groqText);
-          
-          // Ensure critical fields exist
-          reportData.codeHash = codeHash;
-          reportData.score = reportData.score || 0;
-          reportData.summary = reportData.summary || "No summary provided.";
-          reportData.issues = reportData.issues || [];
-          
-          return res.json(reportData);
-        } catch (parseError) {
-          console.error("Groq Audit returned non-JSON response:", groqText);
-          throw new Error("Groq returned an invalid response format.");
-        }
-      } catch (e) {
-        console.error("Groq Audit failed:", e.message);
-        res.status(502).json({ 
-          error: `Groq Audit failed: ${e.message}`,
-          details: `Please check your Groq API key and quota.`
+        return JSON.parse(completion.choices[0].message.content || "{}");
+      };
+
+      const auditWithGemini = async (key) => {
+        const { GoogleGenerativeAI } = await import("@google/generai");
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({ 
+          model: "gemini-1.5-pro",
+          generationConfig: { responseMimeType: "application/json" }
         });
+        const result = await model.generateContent([systemInstruction, prompt]);
+        const response = await result.response;
+        return JSON.parse(response.text());
+      };
+
+      let reportData;
+      let usedProvider = "none";
+
+      // 1. Try Groq first
+      if (isValidGroqKey(groqKey)) {
+        try {
+          console.log("Attempting audit with Groq...");
+          reportData = await auditWithGroq(groqKey);
+          usedProvider = "groq";
+        } catch (e) {
+          console.error("Groq Audit failed, falling back to Gemini:", e.message);
+        }
       }
+
+      // 2. Fallback to Gemini if Groq failed or wasn't configured
+      if (!reportData && isValidGeminiKey(geminiKey)) {
+        try {
+          console.log("Attempting audit with Gemini (Failover)...");
+          reportData = await auditWithGemini(geminiKey);
+          usedProvider = "gemini";
+        } catch (e) {
+          console.error("Gemini Audit fallback failed:", e.message);
+        }
+      }
+
+      if (reportData) {
+        // Ensure critical fields exist
+        reportData.codeHash = codeHash;
+        reportData.score = reportData.score || 0;
+        reportData.summary = reportData.summary || "No summary provided.";
+        reportData.issues = reportData.issues || [];
+        reportData.provider = usedProvider;
+        
+        return res.json(reportData);
+      }
+
+      return res.status(502).json({ 
+        error: "All AI providers failed. Verification could not be completed.",
+        details: "Please check your API keys and quotas for both Groq and Gemini."
+      });
     } catch (error) {
       console.error("Server Audit Error:", error);
       res.status(500).json({ error: error.message });
@@ -183,24 +209,35 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
   app.post("/api/ai/chat", async (req, res) => {
     try {
       const { message, history } = req.body;
+      const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI;
       const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
-      const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_") && k.length > 20;
-      const activeGroqKey = isValidGroqKey(groqKey) ? groqKey : null;
 
-      if (!activeGroqKey) {
-        return res.status(400).json({ 
-          error: "GROQ_API_KEY is missing or invalid. Please add a valid Groq API key in Settings > Secrets.",
-          instruction: "Go to Settings (bottom left) -> Secrets -> Add Secret. Name it 'GROQ_API_KEY'."
-        });
-      }
+      const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
+      const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_");
 
       const systemInstruction = "You are Rexy Copilot, a highly advanced Smart Contract Security Engineer and Web3 expert, specifically focused on the Solana ecosystem. You are witty, sharp, and slightly cheeky but always incredibly accurate. You help developers find bugs, write secure Anchor (Rust) code, and understand post-quantum cryptography mitigation. Keep responses concise unless coding is required. Provide perfectly formatted markdown for any code snippets.";
 
-      // Use Groq
-      try {
+      const chatWithGemini = async (key) => {
+        const { GoogleGenerativeAI } = await import("@google/generai");
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({ 
+          model: "gemini-1.5-pro",
+          systemInstruction: systemInstruction,
+        });
+        const chat = model.startChat({
+          history: history.map(h => ({
+            role: h.role === "model" ? "model" : "user",
+            parts: [{ text: h.parts[0].text }]
+          })),
+        });
+        const result = await chat.sendMessage(message);
+        const response = await result.response;
+        return response.text();
+      };
+
+      const chatWithGroq = async (key) => {
         const Groq = (await import("groq-sdk")).default;
-        const groq = new Groq({ apiKey: activeGroqKey });
-        
+        const groq = new Groq({ apiKey: key });
         const messages = history.map((msg) => ({
           role: msg.role === "model" ? "assistant" : "user",
           content: msg.parts[0].text
@@ -215,12 +252,39 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
           model: "llama-3.3-70b-versatile",
           temperature: 0.7
         });
+        return completion.choices[0].message.content;
+      };
 
-        return res.json({ text: completion.choices[0].message.content });
-      } catch (e) {
-        console.error("Groq Chat failed:", e.message);
-        res.status(502).json({ error: `Groq Chat failed: ${e.message}` });
+      let responseText;
+
+      // 1. Try Gemini first
+      if (isValidGeminiKey(geminiKey)) {
+        try {
+          console.log("Attempting chat with Gemini...");
+          responseText = await chatWithGemini(geminiKey);
+        } catch (e) {
+          console.error("Gemini Chat failed, falling back to Groq:", e.message);
+        }
       }
+
+      // 2. Fallback to Groq
+      if (!responseText && isValidGroqKey(groqKey)) {
+        try {
+          console.log("Attempting chat with Groq (Failover)...");
+          responseText = await chatWithGroq(groqKey);
+        } catch (e) {
+          console.error("Groq Chat fallback failed:", e.message);
+        }
+      }
+
+      if (responseText) {
+        return res.json({ text: responseText });
+      }
+
+      return res.status(502).json({ 
+        error: "Copilot is currently unavailable. No AI provider responded.",
+        details: "Please check your Groq and Gemini API keys."
+      });
     } catch (error) {
       console.error("Server Chat Error:", error);
       res.status(500).json({ error: error.message });
@@ -230,19 +294,27 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
   // API routes
   app.get("/api/health", (req, res) => {
     const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
-    const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_") && k.length > 20;
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI;
+    
+    const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_");
+    const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
 
     res.json({ 
       status: "ok", 
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
       providers: {
-        groq: {
+        audit: {
+          name: "Groq Llama-3",
           configured: !!groqKey,
-          validFormat: isValidGroqKey(groqKey)
+          status: isValidGroqKey(groqKey) ? "connected" : "missing"
+        },
+        copilot: {
+          name: "Gemini 1.5 Pro",
+          configured: !!geminiKey,
+          status: isValidGeminiKey(geminiKey) ? "connected" : "missing"
         }
-      },
-      activeProvider: isValidGroqKey(groqKey) ? "groq" : "none"
+      }
     });
   });
 
@@ -345,7 +417,8 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
     console.log(`🚀 Rexy AI Auditor Server is LIVE`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`🛠️  Mode: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
-    console.log(`🔒 GROQ_API_KEY: ${process.env.GROQ_API_KEY ? 'Configured' : 'MISSING'}`);
+    console.log(`🧠 Audit Engine (Groq): ${process.env.GROQ_API_KEY ? 'Configured' : 'MISSING'}`);
+    console.log(`🤖 Copilot (Gemini): ${process.env.GEMINI_API_KEY ? 'Configured' : 'MISSING'}`);
     console.log(`=========================================`);
   });
 }

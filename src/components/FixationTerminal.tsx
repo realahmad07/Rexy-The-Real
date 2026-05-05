@@ -71,7 +71,7 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage 
       } else {
         clearInterval(logInterval);
       }
-    }, 800);
+    }, 500); // Reduced from 800ms
 
     return () => clearInterval(logInterval);
   }, [stage, lines.length]);
