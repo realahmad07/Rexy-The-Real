@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { performAudit } from '../services/geminiService';
+import { performAudit } from '../services/aiService';
 import { Loader2, ShieldAlert, AlertCircle, Code2, Wallet, ExternalLink } from 'lucide-react';
 import { AuditReport } from '../types';
 import { AuditReportView } from './AuditReportView';
@@ -8,6 +8,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { requestPayment, recordAuditOnChain } from '../services/solanaService';
 import { useAppState } from '../contexts/AppStateContext';
+import { FixationTerminal } from './FixationTerminal';
 
 const AuditView: React.FC = () => {
   const { connected } = useWallet();
@@ -21,9 +22,11 @@ const AuditView: React.FC = () => {
   } = useAppState();
 
   const [loading, setLoading] = useState(false);
+  const [auditStage, setAuditStage] = useState<'idle' | 'payment' | 'static' | 'ai' | 'blockchain'>('idle');
   const [fetchingCode, setFetchingCode] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isQuantumAudit, setIsQuantumAudit] = useState(false);
 
   const handleFetchCode = async () => {
     if (!address.trim()) return;
@@ -57,6 +60,7 @@ const AuditView: React.FC = () => {
 
     setError(null);
     setPaymentProcessing(true);
+    setAuditStage('payment');
     
     try {
       let signature = "";
@@ -70,8 +74,15 @@ const AuditView: React.FC = () => {
       setLoading(true);
       setReport(null);
 
-      // Step 2: Perform AI Audit
-      const result = await performAudit(auditCode, false);
+      // Step 2: Static Analysis (Solana Vulnerability Library)
+      setAuditStage('static');
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Show the stage
+
+      // Step 3: AI Analysis (Deep Brain Engine)
+      setAuditStage('ai');
+      const result = await performAudit(auditCode, isQuantumAudit);
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Let the AI logs finish
+      
       if (result) {
         let finalSignature = signature;
         
@@ -80,13 +91,12 @@ const AuditView: React.FC = () => {
           originalCode: auditCode
         };
 
-        // Step 3: Record Proof On-Chain (Real proof with hash)
+        // Step 4: Record Proof On-Chain
+        setAuditStage('blockchain');
         if (connected && wallet.publicKey) {
           try {
-            console.log("Recording audit proof on-chain...");
             const proofSignature = await recordAuditOnChain(wallet, result.id || "rexy_" + Date.now(), result.score, connection);
             finalSignature = proofSignature;
-            console.log("On-chain proof recorded:", proofSignature);
           } catch (proofErr) {
             console.warn("Failed to record on-chain proof, falling back to payment signature:", proofErr);
           }
@@ -128,6 +138,7 @@ const AuditView: React.FC = () => {
     } finally {
       setPaymentProcessing(false);
       setLoading(false);
+      setAuditStage('idle');
     }
   };
 
@@ -160,12 +171,26 @@ const AuditView: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => setCode('')}
-                  className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  Clear
-                </button>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={isQuantumAudit}
+                        onChange={() => setIsQuantumAudit(!isQuantumAudit)}
+                      />
+                      <div className="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-rexy-primary"></div>
+                      <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-slate-500">Quantum Audit</span>
+                    </label>
+                  </div>
+                  <button
+                    onClick={() => setCode('')}
+                    className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
               <textarea
                 value={code}
@@ -185,15 +210,30 @@ const AuditView: React.FC = () => {
               disabled={loading || paymentProcessing || !code.trim()}
               className="w-full py-4 bg-rexy-primary hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-black text-lg transition-all flex items-center justify-center space-x-2 shadow-lg shadow-rexy-primary/20 group uppercase tracking-widest"
             >
-              {paymentProcessing ? (
+              {auditStage === 'payment' ? (
                 <>
                   <Loader2 className="animate-spin" />
-                  <span>Processing Payment...</span>
+                  <span>Paying...</span>
+                </>
+              ) : auditStage === 'static' ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  <span>Library Check...</span>
+                </>
+              ) : auditStage === 'ai' ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  <span>AI Auditing...</span>
+                </>
+              ) : auditStage === 'blockchain' ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  <span>Recording...</span>
                 </>
               ) : loading ? (
                 <>
                   <Loader2 className="animate-spin" />
-                  <span>Analyzing Contract...</span>
+                  <span>Working...</span>
                 </>
               ) : (
                 <>
@@ -223,30 +263,33 @@ const AuditView: React.FC = () => {
           </div>
 
           <div className="bg-rexy-card border border-rexy-border rounded-2xl overflow-hidden flex flex-col shadow-2xl">
-            <div className="px-6 py-4 border-b border-rexy-border bg-rexy-bg/50">
-              <span className="text-sm font-bold text-slate-600 uppercase tracking-widest">Audit Status</span>
+            <div className="px-6 py-4 border-b border-rexy-border bg-rexy-bg/50 flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-600 uppercase tracking-widest">Audit Terminal</span>
+              {(loading || paymentProcessing) && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-rexy-primary animate-ping" />
+                  <span className="text-[10px] font-black text-rexy-primary uppercase tracking-widest">Processing</span>
+                </div>
+              )}
             </div>
-            <div className="flex-1 p-8 flex flex-col items-center justify-center text-slate-500 space-y-6">
-              <div className="relative">
-                <AlertCircle size={80} strokeWidth={1} className="opacity-20" />
-                {(loading || paymentProcessing) && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-16 h-16 border-4 border-rexy-primary/20 border-t-rexy-primary rounded-full animate-spin" />
+            <div className="flex-1 p-0 flex flex-col items-center justify-center text-slate-500 overflow-hidden">
+              {loading || paymentProcessing ? (
+                <FixationTerminal code={code} stage={auditStage === 'idle' ? 'payment' : auditStage} />
+              ) : (
+                <div className="p-8 flex flex-col items-center justify-center text-center space-y-6">
+                  <div className="relative">
+                    <AlertCircle size={80} strokeWidth={1} className="opacity-20" />
                   </div>
-                )}
-              </div>
-              <div className="text-center space-y-2">
-                <p className="text-lg font-medium text-slate-700">
-                  {paymentProcessing ? "Waiting for transaction confirmation..." : loading ? "AI is scanning for vulnerabilities..." : "Ready for Analysis"}
-                </p>
-                <p className="text-sm max-w-xs mx-auto text-slate-600">
-                  {paymentProcessing 
-                    ? "Please approve the transaction in your wallet. You may see a security warning—this is normal when interacting with the Solana Memo program for the first time."
-                    : loading 
-                    ? "Our world-class security model is performing formal verification and pattern matching on your code."
-                    : "Enter your contract code and start the audit to generate a comprehensive security report."}
-                </p>
-              </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-lg font-medium text-slate-700 uppercase tracking-tight">
+                      Ready for Analysis
+                    </p>
+                    <p className="text-sm max-w-xs mx-auto text-slate-600">
+                      Enter your contract code and start the audit to generate a comprehensive security report.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

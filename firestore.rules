@@ -71,7 +71,11 @@ service cloud.firestore {
              data.summary is string &&
              data.issues is list &&
              data.timestamp is timestamp &&
-             data.status in ['success', 'failed'];
+             data.status in ['success', 'failed'] &&
+             // Size constraints
+             data.codeHash.size() <= 128 &&
+             data.summary.size() <= 50000 &&
+             data.issues.size() <= 100;
     }
 
     // ===============================================================
@@ -79,7 +83,7 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin() || (userId.size() >= 32 && userId.size() <= 44);
+      allow read: if isOwner(userId) || isAdmin() || (!isAuthenticated() && userId.size() >= 32 && userId.size() <= 44);
       allow create: if isValidUser(request.resource.data) && 
                     (
                       (isAuthenticated() && isOwner(userId) && request.resource.data.role == 'user') || 
@@ -88,12 +92,10 @@ service cloud.firestore {
                     ) && isRecent(request.resource.data.createdAt);
       allow update: if isValidUser(request.resource.data) && 
                     (
-                      (isAuthenticated() && isOwner(userId) && request.resource.data.role == resource.data.role) || 
-                      (!isAuthenticated() && userId == resource.id && userId.size() >= 32 && userId.size() <= 44 && request.resource.data.role == resource.data.role) ||
-                      isAdmin()
-                    ) &&
-                    request.resource.data.uid == resource.data.uid &&
-                    request.resource.data.createdAt == resource.data.createdAt;
+                      isAdmin() || 
+                      (isAuthenticated() && isOwner(userId) && request.resource.data.role == resource.data.role) ||
+                      (!isAuthenticated() && userId == resource.id && userId.size() >= 32 && userId.size() <= 44 && request.resource.data.role == resource.data.role)
+                    );
     }
 
     match /audits/{auditId} {
@@ -101,11 +103,10 @@ service cloud.firestore {
       allow create: if isValidAudit(request.resource.data) && 
                     (
                       (isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin())) ||
-                      (!isAuthenticated() && request.resource.data.userId is string && request.resource.data.userId.size() >= 32 && request.resource.data.userId.size() <= 44)
+                      // Allow anonymous writes for Solana wallet users
+                      (!isAuthenticated() && request.resource.data.userId.size() >= 32 && request.resource.data.userId.size() <= 44)
                     );
-      allow update: if isAdmin() || 
-                    (isAuthenticated() && resource.data.userId == request.auth.uid) ||
-                    (!isAuthenticated() && resource.data.userId.size() >= 32 && resource.data.userId.size() <= 44);
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow delete: if isAdmin();
     }
 

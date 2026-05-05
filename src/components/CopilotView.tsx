@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Terminal, Send, Cpu, Zap, Activity, Shield, Code, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { chatWithRexy } from '../services/geminiService';
+import { chatWithRexy } from '../services/aiService';
 import { cn } from '../lib/utils';
 import { useAppState, ChatMessage } from '../contexts/AppStateContext';
 

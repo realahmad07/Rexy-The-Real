@@ -7,8 +7,8 @@ const InfoView: React.FC = () => {
     {
       phase: "Phase 1",
       status: "Current",
-      title: "Multi-Stage AI Audits",
-      description: "Static analysis, rule-based detection, and attack simulations for Solana & Solidity.",
+      title: "Double-Layer Hybrid Audits",
+      description: "Solana SOL-Atlas Library + Neural Logic Verification via Groq Llama-3.",
       icon: Shield,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10"
@@ -151,22 +151,22 @@ const InfoView: React.FC = () => {
             The AI Engine
           </h3>
           <div className="space-y-6">
-            <div className="p-6 bg-indigo-500/5 rounded-2xl border border-indigo-500/20">
+            <div className="p-6 bg-rexy-primary/5 rounded-2xl border border-rexy-primary/20">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-bold text-slate-900">Gemini 1.5 Pro</h4>
-                <span className="px-2 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase rounded-lg">Core Backend</span>
+                <h4 className="font-bold text-slate-900">Groq Llama-3 (Deep Brain)</h4>
+                <span className="px-2 py-1 bg-rexy-primary/10 text-rexy-primary text-[10px] font-black uppercase rounded-lg">Primary Engine</span>
               </div>
               <p className="text-sm text-slate-600 leading-relaxed">
-                We leverage Google's state-of-the-art Gemini 1.5 Pro model for deep static analysis. With its massive 1M+ token context window, it can review massive codebases in a single pass, understanding the relationships between thousands of files at once.
+                We leverage the ultra-low latency Groq Llama-3 engine for lightning-fast security analysis. It can reason through complex Anchor program states in milliseconds, providing an "Always-On" security layer for developers.
               </p>
             </div>
-            <div className="p-6 bg-slate-100 rounded-2xl border border-slate-200">
+            <div className="p-6 bg-indigo-500/5 rounded-2xl border border-indigo-500/20">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-bold text-slate-900">Custom System Prompts</h4>
-                <span className="px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-lg">Fine-tuned</span>
+                <h4 className="font-bold text-slate-900">Gemini 1.5 Pro Hybrid</h4>
+                <span className="px-2 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase rounded-lg">Redundancy Layer</span>
               </div>
               <p className="text-sm text-slate-600 leading-relaxed">
-                The engine is heavily injected with custom prompt constraints focusing exclusively on the Solana Sealevel execution environment, Anchor frameworks, and known PDA/Signer exploits.
+                For massive context projects (1M+ lines), the engine switches to Gemini 1.5 Pro, ensuring that no file relationship is missed during the formal verification process.
               </p>
             </div>
           </div>

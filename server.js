@@ -51,31 +51,26 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  // Gemini API Routes (Secure Backend)
-  app.post("/api/gemini/audit", async (req, res) => {
+  // AI API Routes (Secure Backend)
+  app.post("/api/ai/audit", async (req, res) => {
     try {
       const { contractCode, isQuantumAttack } = req.body;
       if (!contractCode) {
         return res.status(400).json({ error: "contractCode is required" });
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: "Server GEMINI_API_KEY varies" });
+      const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
+      const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_") && k.length > 20;
+      const activeGroqKey = isValidGroqKey(groqKey) ? groqKey : null;
+
+      if (!activeGroqKey) {
+        return res.status(400).json({ 
+          error: "GROQ_API_KEY is missing or invalid. Please add a valid Groq API key (starts with gsk_) in Settings > Secrets.",
+          instruction: "Go to Settings (bottom left) -> Secrets -> Add Secret. Name it 'GROQ_API_KEY'."
+        });
       }
 
-      // First pass: Static analysis based on vulnerability library
-      // Because we lack the frontend imports here, let's just use the AI for the analysis.
-      const quantumPromptAddition = isQuantumAttack 
-        ? `\n\n🚨 QUANTUM Q-DAY SIMULATION ACTIVE 🚨\nAssume the primary admin/owner private keys have been mathematically broken by a quantum computer running Shor's Algorithm. Perform a threat model focusing on:\n- Blast Radius: What can the attacker drain/destroy instantly?\n- PQC Readiness: Does the contract lack time-locks, multi-sigs, or upgradeability to mitigate sudden key compromise?\n- Hardcoded Crypto: Are there manual secp256k1 or ed25519 signature verifications that need post-quantum cryptographic (PQC) upgrades?\n\nCRITICAL DIRECTIVE: The 'fullFixedCode' MUST contain REAL mitigation code. Do not just fix normal bugs. You MUST inject Post-Quantum Cryptography (PQC) / Q-Day defenses: Add emergency freeze/pause multi-sigs, time-locks for critical state changes, and explicitly comment on areas replacing legacy signatures with PQC-ready verifications. Explicitly state in your summary how the quantum risk was neutralized.` 
-        : `\n\n🔍 Q-Day Readiness Assessment: Analyze the contract for Post-Quantum readiness (hardcoded crypto, blast radius of key compromise, time-locks, upgradeability).`;
-
-      const ai = new (await import("@google/genai")).GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `Analyze the following smart contract code:\n\n${contractCode}${quantumPromptAddition}`,
-        config: {
-          systemInstruction: `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
+      const systemInstruction = `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
 Your mission is to perform deep security audits on smart contracts using a multi-stage analysis engine.
 
 ⛔ CRITICAL FORMATTING RULES:
@@ -96,7 +91,7 @@ Implement rule-based detection for critical patterns:
 
 4️⃣ LOGIC FLOW ANALYZER
 Simulate contract behavior and track state transitions:
-- Track deposit → balance → withdraw flow.
+- Track deposit -> balance -> withdraw flow.
 - Detect inconsistencies: Can user withdraw without deposit? Can balance be manipulated? Does state become inconsistent?
 
 5️⃣ ATTACK SIMULATION ENGINE (IMPORTANT)
@@ -130,92 +125,102 @@ The 'summary' field MUST be a comprehensive, multi-paragraph executive summary (
 4. Strategic recommendations for long-term security.
 5. A concluding statement on the contract's readiness for mainnet.
 
-For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also provide a 'fullFixedCode' field containing the ENTIRE smart contract with ALL security improvements and vulnerabilities patched.`,
-          responseMimeType: "application/json",
-          temperature: 0.1,
-          responseSchema: {
-            type: (await import("@google/genai")).Type.OBJECT,
-            properties: {
-              contractName: { type: (await import("@google/genai")).Type.STRING },
-              summary: { type: (await import("@google/genai")).Type.STRING },
-              score: { type: (await import("@google/genai")).Type.NUMBER },
-              quantumReadinessScore: { type: (await import("@google/genai")).Type.NUMBER },
-              quantumReadinessSummary: { type: (await import("@google/genai")).Type.STRING },
-              issues: {
-                type: (await import("@google/genai")).Type.ARRAY,
-                items: {
-                  type: (await import("@google/genai")).Type.OBJECT,
-                  properties: {
-                    severity: { type: (await import("@google/genai")).Type.STRING, enum: ["Critical", "High", "Medium", "Low", "Informational"] },
-                    title: { type: (await import("@google/genai")).Type.STRING },
-                    description: { type: (await import("@google/genai")).Type.STRING },
-                    recommendation: { type: (await import("@google/genai")).Type.STRING },
-                    fixedCode: { type: (await import("@google/genai")).Type.STRING },
-                    line: { type: (await import("@google/genai")).Type.NUMBER },
-                    gasImpact: { type: (await import("@google/genai")).Type.STRING },
-                    reference: { type: (await import("@google/genai")).Type.STRING },
-                    financialRisk: { type: (await import("@google/genai")).Type.STRING },
-                    logicRisk: { type: (await import("@google/genai")).Type.STRING },
-                    exploitLikelihood: { type: (await import("@google/genai")).Type.STRING },
-                    accessControlRisk: { type: (await import("@google/genai")).Type.STRING }
-                  },
-                  required: ["severity", "title", "description", "recommendation", "financialRisk", "logicRisk", "exploitLikelihood", "accessControlRisk"]
-                }
-              },
-              fullFixedCode: { type: (await import("@google/genai")).Type.STRING },
-              gasOptimizationSummary: { type: (await import("@google/genai")).Type.STRING }
-            },
-            required: ["summary", "score", "issues"]
-          }
-        }
-      });
+For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also provide a 'fullFixedCode' field containing the ENTIRE smart contract with ALL security improvements and vulnerabilities patched.`;
 
-      const reportData = JSON.parse(response.text || "{}");
-      res.json(reportData);
+      const quantumPromptAddition = isQuantumAttack 
+        ? `\n\n🚨 QUANTUM Q-DAY SIMULATION ACTIVE 🚨\nAssume the primary admin/owner private keys have been mathematically broken by a quantum computer running Shor's Algorithm. Perform a threat model focusing on:\n- Blast Radius: What can the attacker drain/destroy instantly?\n- PQC Readiness: Does the contract lack time-locks, multi-sigs, or upgradeability to mitigate sudden key compromise?\n- Hardcoded Crypto: Are there manual secp256k1 or ed25519 signature verifications that need post-quantum cryptographic (PQC) upgrades?\n\nCRITICAL DIRECTIVE: The 'fullFixedCode' MUST contain REAL mitigation code. Do not just fix normal bugs. You MUST inject Post-Quantum Cryptography (PQC) / Q-Day defenses: Add emergency freeze/pause multi-sigs, time-locks for critical state changes, and explicitly comment on areas replacing legacy signatures with PQC-ready verifications. Explicitly state in your summary how the quantum risk was neutralized.` 
+        : `\n\n🔍 Q-Day Readiness Assessment: Analyze the contract for Post-Quantum readiness (hardcoded crypto, blast radius of key compromise, time-locks, upgradeability).`;
+
+      const prompt = `Analyze the following smart contract code:\n\n${contractCode}${quantumPromptAddition}`;
+
+      // Calculate code hash for audit integrity
+      const crypto = await import("node:crypto");
+      const codeHash = crypto.createHash('sha256').update(contractCode).digest('hex');
+
+      let reportData;
+
+      // Use Groq
+      try {
+        const Groq = (await import("groq-sdk")).default;
+        const groq = new Groq({ apiKey: activeGroqKey });
+        const completion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: systemInstruction },
+            { role: "user", content: prompt }
+          ],
+          model: "llama-3.3-70b-versatile",
+          response_format: { type: "json_object" },
+          temperature: 0.1
+        });
+        const groqText = completion.choices[0].message.content || "{}";
+        try {
+          reportData = JSON.parse(groqText);
+          
+          // Ensure critical fields exist
+          reportData.codeHash = codeHash;
+          reportData.score = reportData.score || 0;
+          reportData.summary = reportData.summary || "No summary provided.";
+          reportData.issues = reportData.issues || [];
+          
+          return res.json(reportData);
+        } catch (parseError) {
+          console.error("Groq Audit returned non-JSON response:", groqText);
+          throw new Error("Groq returned an invalid response format.");
+        }
+      } catch (e) {
+        console.error("Groq Audit failed:", e.message);
+        res.status(502).json({ 
+          error: `Groq Audit failed: ${e.message}`,
+          details: `Please check your Groq API key and quota.`
+        });
+      }
     } catch (error) {
       console.error("Server Audit Error:", error);
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/gemini/chat", async (req, res) => {
+  app.post("/api/ai/chat", async (req, res) => {
     try {
       const { message, history } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: "Server GEMINI_API_KEY is missing" });
-      }
+      const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
+      const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_") && k.length > 20;
+      const activeGroqKey = isValidGroqKey(groqKey) ? groqKey : null;
 
-      const ai = new (await import("@google/genai")).GoogleGenAI({ apiKey });
-      const chat = ai.chats.create({
-        model: "gemini-3.1-pro-preview",
-        config: {
-          systemInstruction: "You are Rexy Copilot, a highly advanced Smart Contract Security Engineer and Web3 expert, specifically focused on the Solana ecosystem. You are witty, sharp, and slightly cheeky but always incredibly accurate. You help developers find bugs, write secure Anchor (Rust) code, and understand post-quantum cryptography mitigation. Keep responses concise unless coding is required. Provide perfectly formatted markdown for any code snippets.",
-          temperature: 0.7,
-        },
-      });
-
-      let response;
-      if (history && history.length > 0) {
-        const formattedContents = history.map((msg) => ({
-          role: msg.role,
-          parts: msg.parts
-        }));
-        formattedContents.push({ role: "user", parts: [{ text: message }] });
-        
-        response = await ai.models.generateContent({
-          model: "gemini-3.1-pro-preview",
-          contents: formattedContents,
-          config: {
-            systemInstruction: "You are Rexy Copilot, a highly advanced Smart Contract Security Engineer... You are witty, sharp, and slightly cheeky but always incredibly accurate. You help developers find bugs, write secure Anchor (Rust) code, and understand post-quantum cryptography mitigation. Keep responses concise unless coding is required. Provide perfectly formatted markdown for any code snippets.",
-            temperature: 0.7,
-          }
+      if (!activeGroqKey) {
+        return res.status(400).json({ 
+          error: "GROQ_API_KEY is missing or invalid. Please add a valid Groq API key in Settings > Secrets.",
+          instruction: "Go to Settings (bottom left) -> Secrets -> Add Secret. Name it 'GROQ_API_KEY'."
         });
-      } else {
-        response = await chat.sendMessage({ message });
       }
 
-      res.json({ text: response.text });
+      const systemInstruction = "You are Rexy Copilot, a highly advanced Smart Contract Security Engineer and Web3 expert, specifically focused on the Solana ecosystem. You are witty, sharp, and slightly cheeky but always incredibly accurate. You help developers find bugs, write secure Anchor (Rust) code, and understand post-quantum cryptography mitigation. Keep responses concise unless coding is required. Provide perfectly formatted markdown for any code snippets.";
+
+      // Use Groq
+      try {
+        const Groq = (await import("groq-sdk")).default;
+        const groq = new Groq({ apiKey: activeGroqKey });
+        
+        const messages = history.map((msg) => ({
+          role: msg.role === "model" ? "assistant" : "user",
+          content: msg.parts[0].text
+        }));
+        messages.push({ role: "user", content: message });
+
+        const completion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: systemInstruction },
+            ...messages
+          ],
+          model: "llama-3.3-70b-versatile",
+          temperature: 0.7
+        });
+
+        return res.json({ text: completion.choices[0].message.content });
+      } catch (e) {
+        console.error("Groq Chat failed:", e.message);
+        res.status(502).json({ error: `Groq Chat failed: ${e.message}` });
+      }
     } catch (error) {
       console.error("Server Chat Error:", error);
       res.status(500).json({ error: error.message });
@@ -224,12 +229,20 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
 
   // API routes
   app.get("/api/health", (req, res) => {
+    const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
+    const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_") && k.length > 20;
+
     res.json({ 
       status: "ok", 
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
-      hasKey: !!process.env.GEMINI_API_KEY,
-      keySnippet: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 8) : "none"
+      providers: {
+        groq: {
+          configured: !!groqKey,
+          validFormat: isValidGroqKey(groqKey)
+        }
+      },
+      activeProvider: isValidGroqKey(groqKey) ? "groq" : "none"
     });
   });
 
@@ -320,8 +333,8 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
       server: { middlewareMode: true },
       appType: "spa",
       define: {
-        'process.env.VITE_HELIUS_API_KEY': JSON.stringify(process.env.VITE_HELIUS_API_KEY || ""),
-        'process.env.VITE_TREASURY_ADDRESS': JSON.stringify(process.env.VITE_TREASURY_ADDRESS || ""),
+        'process.env.VITE_HELIUS_API_KEY': JSON.stringify(process.env.VITE_HELIUS_API_KEY || process.env.HELIUS || ""),
+        'process.env.VITE_TREASURY_ADDRESS': JSON.stringify(process.env.VITE_TREASURY_ADDRESS || process.env.TREASURY || ""),
       }
     });
     app.use(vite.middlewares);
@@ -332,7 +345,7 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
     console.log(`🚀 Rexy AI Auditor Server is LIVE`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`🛠️  Mode: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
-    console.log(`🔒 GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? 'Configured' : 'MISSING'}`);
+    console.log(`🔒 GROQ_API_KEY: ${process.env.GROQ_API_KEY ? 'Configured' : 'MISSING'}`);
     console.log(`=========================================`);
   });
 }

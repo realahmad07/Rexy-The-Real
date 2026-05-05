@@ -8,9 +8,9 @@ Rexy AI Auditor is a cutting-edge, blockchain-verified security auditing platfor
 - **Layer 1: Solana Vulnerability Library**: Code is first passed through our native static analysis engine which contains hardcoded patterns for known Solana vulnerabilities (e.g., missing signer checks, PDA derivation flaws).
 - **Layer 2: AI Semantic Analysis**: Code is then deep-analyzed by Gemini 1.5 Pro to catch complex logical flaws that static analysis misses.
 
-### 2. AI-Driven Security Engine (Gemini 1.5 Pro)
-- **Model**: Powered by **Google Gemini 1.5 Pro**, optimized for high-depth code analysis and vulnerability detection. Leverages massive 1M+ token context windows.
-- **Security Architecture**: AI audits are processed via a Secure Backend Proxy (Express/Node.js). This hides sensitive API keys and allows for rate limiting.
+### 2. AI-Driven Security Engine (Groq Llama-3)
+- **Model**: Powered by **Groq Llama-3 (Deep Brain Engine)**, optimized for ultra-low latency code analysis and logical vulnerability detection.
+- **Security Architecture**: AI audits are processed via a Secure Backend Proxy (Express/Node.js). Support for Gemini 1.5 Pro as a secondary redundancy layer is also included.
 - **Support**: Deep support for **Anchor (Rust)** and specific Solana execution environments (PDA/Signer vulnerabilities).
 - **Interactive Patching & Copilot**: Automatically generates "AI Security Patches" (diffs) that users can apply directly, and includes an interactive AI Copilot (Rexy) for conversational guidance.
 

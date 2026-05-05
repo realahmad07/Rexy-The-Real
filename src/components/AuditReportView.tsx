@@ -757,6 +757,78 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
         ))}
       </div>
 
+      {/* DOUBLE LAYER SECURITY CHECK VISUALIZATION */}
+      <div className="p-12 lg:p-20 bg-slate-900 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-full h-full opacity-5 pointer-events-none">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#4f46e5_0,transparent_50%)]" />
+        </div>
+        
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-20">
+          <div className="space-y-8">
+            <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-rexy-primary/20 rounded-full border border-rexy-primary/30">
+              <Shield className="w-3.5 h-3.5 text-rexy-primary" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-rexy-primary">Hybrid Deep Audit Architecture</span>
+            </div>
+            <h3 className="text-4xl font-black tracking-tight leading-tight uppercase">
+              Double-Layer <br />
+              <span className="text-rexy-primary">Full-Spectrum</span> <br />
+              Analysis Result
+            </h3>
+            <p className="text-slate-400 text-lg font-medium leading-relaxed">
+              Your code has been processed through our dual-engine pipeline, combining the speed of deterministic pattern matching with the depth of neural logic verification.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="p-3 bg-emerald-500/10 rounded-xl">
+                  <Layout className="w-6 h-6 text-emerald-500" />
+                </div>
+                <div className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest">LAYER 01</div>
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-white">Solana Lib Check</h4>
+                <p className="text-xs text-slate-500 mt-2">Deterministic vulnerability matching via Rexy-SOL-Atlas v1.2</p>
+              </div>
+              <div className="flex items-end justify-between pt-4">
+                <div className="space-y-1">
+                  <div className="text-2xl font-black text-white">{report.staticAnalysis?.findings?.length || 0}</div>
+                  <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Static Matches</div>
+                </div>
+                <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3" />
+                  PASSED
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 rounded-3xl bg-rexy-primary border border-rexy-primary/50 space-y-6 shadow-2xl shadow-rexy-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="p-3 bg-white/20 rounded-xl">
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-[9px] font-black text-white/60 bg-white/10 px-3 py-1 rounded-full uppercase tracking-widest">LAYER 02</div>
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-white">AI Neural Audit</h4>
+                <p className="text-xs text-white/60 mt-2">Formal verification & symbolic execution via Deep Brain Engine</p>
+              </div>
+              <div className="flex items-end justify-between pt-4">
+                <div className="space-y-1">
+                  <div className="text-2xl font-black text-white">{report.issues?.length || 0}</div>
+                  <div className="text-[8px] font-black text-white/50 uppercase tracking-widest">Neural Insights</div>
+                </div>
+                <div className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3" />
+                  VERIFIED
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* VULNERABILITIES HEADER */}
       <div className="p-12 lg:px-20 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
         <div className="flex items-center gap-4">

@@ -31,6 +31,7 @@ export interface AuditReport {
   onChainProof?: string;
   certificateMint?: string;
   certificateSignature?: string;
+  staticAnalysis?: any;
 }
 
 export interface AppState {

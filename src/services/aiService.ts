@@ -6,7 +6,7 @@ export async function performAudit(contractCode: string, isQuantumAttack: boolea
   const staticAnalysis = analyzeWithVulnLibrary(contractCode);
   
   try {
-    const response = await fetch("/api/gemini/audit", {
+    const response = await fetch("/api/ai/audit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contractCode, isQuantumAttack })
@@ -26,14 +26,14 @@ export async function performAudit(contractCode: string, isQuantumAttack: boolea
       staticAnalysis
     };
   } catch (error) {
-    console.error("Gemini Audit Error:", error);
+    console.error("AI Audit Error:", error);
     throw error;
   }
 }
 
 export async function chatWithRexy(message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[] = []): Promise<string> {
   try {
-    const response = await fetch("/api/gemini/chat", {
+    const response = await fetch("/api/ai/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, history })

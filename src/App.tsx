@@ -17,6 +17,27 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [systemHealth, setSystemHealth] = useState<'online' | 'offline'>('online');
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        if (data.status === 'ok') {
+          setSystemHealth('online');
+        } else {
+          setSystemHealth('offline');
+        }
+      } catch (err) {
+        setSystemHealth('offline');
+      }
+    };
+
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (connected && publicKey) {
@@ -137,6 +158,12 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full border border-rexy-border">
+              <div className={`w-2 h-2 rounded-full animate-pulse transition-colors ${systemHealth === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span className={`text-[9px] font-black uppercase tracking-widest ${systemHealth === 'online' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {systemHealth === 'online' ? 'Engine Online' : 'Engine Offline'}
+              </span>
+            </div>
             <WalletMultiButton className="!bg-rexy-primary hover:!bg-indigo-500 !h-10 !px-6 !rounded-xl !text-xs !font-bold transition-all shadow-lg shadow-rexy-primary/20" />
           </div>
         </div>

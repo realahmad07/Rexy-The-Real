@@ -4,9 +4,9 @@
 Rexy is an AI-powered smart contract security layer designed to provide real-time vulnerability detection, automated patching, AI-assisted copilot discussions, and on-chain verification for the **Solana (Anchor/Rust)** ecosystem. It bridges the gap between complex security audits and rapid development by providing production-ready fixes and immutable on-chain proofs.
 
 ## 🚀 Key Features (Hackathon "Win Factors")
-- **Double Layer Security Architecture**: Rexy employs a rigorous two-step verification process. Every contract first runs against our custom **Solana Vulnerability Library** (static analysis rules) to catch known exploits instantly, before being passed to Gemini for deep semantic reasoning.
+- **Double Layer Security Architecture**: Rexy employs a rigorous two-step verification process. Every contract first runs against our custom **Solana Vulnerability Library** (static analysis rules) to catch known exploits instantly, before being passed to **Groq Llama-3** for deep semantic reasoning.
 - **Secure Full-Stack Architecture**: Rexy uses a **Secure Backend Proxy** to handle AI requests, protecting sensitive API keys and safely evaluating AI inputs.
-- **Gemini 1.5 Pro Driven**: Massive context capabilities allowing the engine to parse large multi-file Anchor projects and detect logical exploits beyond simple linting.
+- **Groq Llama-3 Driven**: Massive speed and reasoning capabilities allowing the engine to parse Anchor projects and detect logical exploits beyond simple linting.
 - **On-Chain Audit Proofs & Certificate Staking**: Every audit result is recorded on the Solana blockchain. Users can mint **Compressed NFTs** as verified badges, and further **Stake their verification** into an on-chain registry, creating a zero-trust network of audited contract proofs.
 - **Interactive AI Copilot**: A built-in chat agent powered by Gemini, allowing developers to converse with their code, ask about specific patches, or request post-quantum migration strategies.
 - **Real Transactions (No "Demo" Toggles)**: A strict commitment to authentic blockchain interaction. Users "Pay AND Start" their audit, interacting with Phantom wallet immediately rather than relying on mocked flows.
