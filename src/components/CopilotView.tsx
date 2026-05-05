@@ -166,7 +166,7 @@ export default function CopilotView() {
              <Shield className="w-3 h-3" /> Copilot Status
            </h3>
            <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-             Connected to Groq Llama-3 (Deep Brain Engine). Layered with Gemini 1.5 Pro for deep semantic reasoning.
+             Connected to Groq Llama 3.3 70B (Deep Brain Engine). Layered with Gemini 1.5 Pro for deep semantic reasoning.
            </p>
         </div>
       </div>

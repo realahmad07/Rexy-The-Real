@@ -11,6 +11,23 @@ import { AuditReport } from '../types';
 const Dashboard: React.FC = () => {
   const [recentAudits, setRecentAudits] = useState<AuditReport[]>([]);
 
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        setIsOnline(data.status === 'ok');
+      } catch (err) {
+        setIsOnline(false);
+      }
+    };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const q = query(collection(db, 'audits'), orderBy('timestamp', 'desc'), limit(5));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -123,6 +140,16 @@ const Dashboard: React.FC = () => {
               </motion.div>
             ))
           )}
+        </div>
+      </div>
+
+      {/* SYSTEM HEALTH DOT - END OF DASHBOARD */}
+      <div className="flex justify-center pt-4">
+        <div className="inline-flex items-center gap-3 px-4 py-2 bg-white rounded-full border border-rexy-border shadow-sm">
+          <div className={`w-2 h-2 rounded-full animate-pulse transition-colors ${isOnline ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"}`} />
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+            Audit Engine Pulse: <span className={isOnline ? "text-emerald-600" : "text-rose-600"}>{isOnline ? 'Optimal' : 'Offline'}</span>
+          </span>
         </div>
       </div>
     </div>

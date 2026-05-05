@@ -8,7 +8,7 @@ const InfoView: React.FC = () => {
       phase: "Phase 1",
       status: "Current",
       title: "Double-Layer Hybrid Audits",
-      description: "Solana SOL-Atlas Library + Neural Logic Verification via Groq Llama-3.",
+      description: "Solana SOL-Atlas Library + Neural Logic Verification via Groq Llama 3.3 70B.",
       icon: Shield,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10"
@@ -153,20 +153,20 @@ const InfoView: React.FC = () => {
           <div className="space-y-6">
             <div className="p-6 bg-rexy-primary/5 rounded-2xl border border-rexy-primary/20">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-bold text-slate-900">Groq Llama-3 (Deep Brain)</h4>
+                <h4 className="font-bold text-slate-900">Groq Llama 3.3 70B (Deep Brain)</h4>
                 <span className="px-2 py-1 bg-rexy-primary/10 text-rexy-primary text-[10px] font-black uppercase rounded-lg">Primary Engine</span>
               </div>
               <p className="text-sm text-slate-600 leading-relaxed">
-                We leverage the ultra-low latency Groq Llama-3 engine for lightning-fast security analysis. It can reason through complex Anchor program states in milliseconds, providing an "Always-On" security layer for developers.
+                We leverage the ultra-low latency Groq Llama 3.3 70B engine for lightning-fast security analysis. It can reason through complex Anchor program states in milliseconds, providing an "Always-On" security layer for developers.
               </p>
             </div>
             <div className="p-6 bg-indigo-500/5 rounded-2xl border border-indigo-500/20">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-bold text-slate-900">Gemini 1.5 Pro Hybrid</h4>
-                <span className="px-2 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase rounded-lg">Redundancy Layer</span>
+                <h4 className="font-bold text-slate-900">Gemini 1.5 Pro (Deep Logic)</h4>
+                <span className="px-2 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase rounded-lg">Adaptive Layer</span>
               </div>
               <p className="text-sm text-slate-600 leading-relaxed">
-                For massive context projects (1M+ lines), the engine switches to Gemini 1.5 Pro, ensuring that no file relationship is missed during the formal verification process.
+                Layered with Gemini 1.5 Pro to handle massive context projects (2M+ tokens). This ensures that complex cross-file relationships and subtle logical edge cases are caught during the formal verification phase.
               </p>
             </div>
           </div>

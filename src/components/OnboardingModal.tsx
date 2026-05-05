@@ -124,7 +124,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose }) =>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4">
                       <div className="text-xs text-slate-500 text-justify leading-relaxed">
-                        1. <strong>AI Limitations:</strong> While Rexy uses hybrid Groq Llama-3 and Gemini 1.5 Pro models, AI audits are not a substitute for manual peer reviews. Use at your own risk.
+                        1. <strong>AI Limitations:</strong> While Rexy uses hybrid Groq Llama 3.3 70B and Gemini 1.5 Pro models, AI audits are not a substitute for manual peer reviews. Use at your own risk.
                       </div>
                       <div className="text-xs text-slate-500 text-justify leading-relaxed">
                         2. <strong>Fees:</strong> Audit fees are non-refundable as they cover computational costs and on-chain transaction priority fees.

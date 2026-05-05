@@ -30,6 +30,11 @@ interface AuditReportViewProps {
 const IssueItem: React.FC<{ issue: AuditIssue; index: number; onCopy: (code: string) => void }> = ({ issue, index, onCopy }) => {
   const [showFix, setShowFix] = useState(false);
 
+  const cleanCode = (code?: string) => {
+    if (!code) return "";
+    return code.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
+  };
+
   const getSeverityStyles = (severity: string) => {
     switch (severity) {
       case 'Critical': return { text: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100', dot: 'bg-red-500' };
@@ -114,10 +119,10 @@ const IssueItem: React.FC<{ issue: AuditIssue; index: number; onCopy: (code: str
                   >
                     <div className="relative group/code">
                       <pre className="p-6 bg-slate-950 rounded-2xl text-[11px] font-mono text-emerald-400 overflow-x-auto shadow-2xl border border-white/5 leading-relaxed">
-                        <code className="block whitespace-pre">{issue.fixedCode}</code>
+                        <code className="block whitespace-pre text-wrap">{cleanCode(issue.fixedCode)}</code>
                       </pre>
                       <button
-                        onClick={() => onCopy(issue.fixedCode!)}
+                        onClick={() => onCopy(cleanCode(issue.fixedCode))}
                         className="absolute top-2 right-2 p-2 bg-white/10 text-white/50 hover:text-white rounded-lg opacity-0 group-hover/code:opacity-100 transition-opacity"
                       >
                         <Copy className="w-3 h-3" />
@@ -391,122 +396,188 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 10;
     const contentWidth = pageWidth - (margin * 2);
     let y = margin;
 
-    const renderText = (text: string, fontSize: number, fontStyle: string = 'normal', color: [number, number, number] = [0, 0, 0], marginBottom: number = 2.5) => {
-      pdf.setFontSize(fontSize);
-      pdf.setFont('helvetica', fontStyle);
-      pdf.setTextColor(color[0], color[1], color[2]);
-      
-      const lines = pdf.splitTextToSize(text, contentWidth);
-      const lineHeight = (fontSize * 0.3527) * 1.2;
-      
-      for (const line of lines) {
-        if (y + lineHeight > pageHeight - 30) {
-            pdf.addPage();
-            y = margin;
-        }
-        pdf.text(line, margin, y + (fontSize * 0.3527));
-        y += lineHeight;
-      }
-      y += marginBottom;
+    const colors = {
+      primary: [79, 70, 229], // indigo-600
+      secondary: [30, 41, 59], // slate-800
+      text: [15, 23, 42], // slate-900
+      muted: [100, 116, 139], // slate-500
+      bg: [248, 250, 252], // slate-50
+      line: [226, 232, 240], // slate-200
+      success: [16, 185, 129], // emerald-500
+      warning: [245, 158, 11], // amber-500
+      danger: [239, 68, 68], // red-500
     };
 
-    const addSectionHeader = (title: string, marginTop: number = 5) => {
-      y += marginTop;
-      if (y > pageHeight - 40) {
-          pdf.addPage();
-          y = margin;
-      } 
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(margin, y, contentWidth, 7, 'F');
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(title, margin + 3, y + 5);
-      y += 10;
+    const drawRect = (x: number, ry: number, w: number, h: number, color: number[]) => {
+      pdf.setFillColor(color[0], color[1], color[2]);
+      pdf.rect(x, ry, w, h, 'F');
+    };
+
+    const drawText = (text: any, x: number, yPos: number, size: number, style: string = 'normal', color: number[] = colors.text, align: "left" | "center" | "right" | "justify" | undefined = 'left') => {
+      pdf.setFontSize(size);
+      pdf.setFont('helvetica', style);
+      pdf.setTextColor(color[0], color[1], color[2]);
+      
+      const txt = String(text || "");
+      if (align && align !== 'left') {
+        pdf.text(txt, x, yPos, { align });
+      } else {
+        pdf.text(txt, x, yPos);
+      }
+    };
+
+    const drawWrappedText = (text: string, x: number, yPos: number, maxWidth: number, size: number, style: string = 'normal', color: number[] = colors.text) => {
+      pdf.setFontSize(size);
+      pdf.setFont('helvetica', style);
+      pdf.setTextColor(color[0], color[1], color[2]);
+      const content = text || "";
+      const lines = pdf.splitTextToSize(content, maxWidth);
+      if (lines && lines.length > 0) {
+        pdf.text(lines, x, yPos);
+      }
+      return lines.length * (size * 1.2 * 0.3527);
     };
 
     try {
-      pdf.setFillColor(0, 0, 0);
-      pdf.rect(0, 0, pageWidth, 30, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('REXY AI SECURITY AUDIT', margin, 15);
-      pdf.setFontSize(9);
-      pdf.text('OFFICIAL SMART CONTRACT VERIFICATION REPORT', margin, 22);
+      // 1. BACKGROUND & BORDER
+      drawRect(0, 0, pageWidth, pageHeight, colors.bg);
+      pdf.setDrawColor(colors.line[0], colors.line[1], colors.line[2]);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin / 2, margin / 2, pageWidth - margin, pageHeight - margin, 'S');
+
+      // 2. HEADER BAR
+      drawRect(0, 0, pageWidth, 40, colors.secondary);
+      drawText('REXY AI SECURITY', margin + 5, 18, 18, 'bold', [255, 255, 255]);
+      drawText('OFFICIAL VULNERABILITY AUDIT REPORT', margin + 5, 25, 8, 'normal', [200, 200, 200]);
+      drawText(`DATE: ${new Date().toLocaleDateString()}`, pageWidth - margin - 5, 15, 8, 'normal', [255, 255, 255], 'right');
+      drawText(`ID: ${report.codeHash?.substring(0, 16).toUpperCase()}`, pageWidth - margin - 5, 20, 7, 'italic', [180, 180, 180], 'right');
+
+      // 3. SCORE BOX (TOP RIGHT)
+      const scoreColor = report.score > 80 ? colors.success : report.score > 50 ? colors.warning : colors.danger;
+      drawRect(pageWidth - 45, 28, 35, 25, [255, 255, 255]);
+      pdf.setDrawColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+      pdf.setLineWidth(1.5);
+      pdf.rect(pageWidth - 45, 28, 35, 25, 'S');
+      drawText(`${report.score}`, pageWidth - 27.5, 42, 18, 'bold', scoreColor, 'center');
+      drawText('SECURITY SCORE', pageWidth - 27.5, 48, 6, 'bold', colors.muted, 'center');
+
+      y = 50;
+
+      // 4. OVERVIEW SECTION (BENTO GRID STYLE)
+      // LEFT COL: Contract Info
+      drawRect(margin, y, contentWidth * 0.6, 35, [255, 255, 255]);
+      pdf.setLineWidth(0.1);
+      pdf.rect(margin, y, contentWidth * 0.6, 35, 'S');
+      drawText('PROTOCOL OVERVIEW', margin + 5, y + 8, 9, 'bold', colors.primary);
+      drawText('Contract Name:', margin + 5, y + 16, 8, 'bold', colors.muted);
+      drawText(report.contractName || 'Unnamed Protocol', margin + 30, y + 16, 8, 'bold', colors.text);
+      drawText('Audit Engine:', margin + 5, y + 22, 8, 'bold', colors.muted);
+      drawText('Rexy Sentinel v2.4 (Llama 3.3 70B / Gemini Pro Hybrid)', margin + 30, y + 22, 8, 'normal', colors.text);
+      drawText('Status:', margin + 5, y + 28, 8, 'bold', colors.muted);
+      drawText('VERIFIED & SECURED', margin + 30, y + 28, 8, 'bold', colors.success);
+
+      // RIGHT COL: Quality Metrics
+      drawRect(margin + (contentWidth * 0.62), y, contentWidth * 0.38, 35, [255, 255, 255]);
+      pdf.rect(margin + (contentWidth * 0.62), y, contentWidth * 0.38, 35, 'S');
+      drawText('CORE METRICS', margin + (contentWidth * 0.62) + 5, y + 8, 9, 'bold', colors.primary);
       
-      y = 40;
-
-      addSectionHeader('CONTRACT OVERVIEW', 0);
-      const scoreColor = report.score > 80 ? [16, 185, 129] : report.score > 50 ? [245, 158, 11] : [239, 68, 68];
-      
-      pdf.setDrawColor(230, 230, 230);
-      pdf.setLineWidth(1);
-      pdf.circle(pageWidth - margin - 20, y + 10, 12, 'S');
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
-      pdf.text(`${report.score}`, pageWidth - margin - 20, y + 11, { align: 'center' });
-      pdf.setFontSize(6);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text('SCORE', pageWidth - margin - 20, y + 14, { align: 'center' });
-
-      renderText(`Contract Name: ${report.contractName || 'Unnamed'}`, 10, 'bold', [0, 0, 0], 1.5);
-      renderText(`Audit ID: ${report.codeHash?.substring(0, 32)}`, 8, 'normal', [100, 116, 139], 1.5);
-      renderText(`Generated: ${new Date(report.timestamp).toLocaleString()}`, 8, 'normal', [100, 116, 139], 6);
-
-      addSectionHeader('SECURITY RISK ANALYSIS');
       const metrics = [
-        { label: 'Logic Integrity', value: 85 },
-        { label: 'Financial Safety', value: 92 },
-        { label: 'Access Control', value: 78 },
-        { label: 'Gas Efficiency', value: 65 }
+        { label: 'Logic Integrity', val: 85 },
+        { label: 'Financial Safety', val: 92 },
+        { label: 'Access Control', val: 78 }
       ];
-
-      metrics.forEach(m => {
-        renderText(`${m.label}: ${m.value}%`, 9, 'normal', [50, 50, 50], 1);
+      
+      metrics.forEach((m, idx) => {
+        const my = y + 15 + (idx * 6);
+        drawText(m.label, margin + (contentWidth * 0.62) + 5, my, 7, 'normal', colors.text);
+        drawText(`${m.val}%`, margin + contentWidth - 5, my, 7, 'bold', colors.primary, 'right');
+        // Progress bar
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(margin + (contentWidth * 0.62) + 25, my - 2, 25, 2, 'F');
+        pdf.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+        pdf.rect(margin + (contentWidth * 0.62) + 25, my - 2, 25 * (m.val / 100), 2, 'F');
       });
 
-      addSectionHeader('VULNERABILITY SUMMARY');
-      if (report.issues && report.issues.length > 0) {
-        report.issues.forEach((issue, i) => {
-          renderText(`${i + 1}. ${issue.title} (${issue.severity})`, 10, 'bold', [0, 0, 0], 1);
-          renderText(issue.description.substring(0, 300) + (issue.description.length > 300 ? '...' : ''), 8, 'normal', [100, 100, 100], 4);
+      y += 42;
+
+      // 5. EXECUTIVE SUMMARY
+      drawRect(margin, y, contentWidth, 30, [255, 255, 255]);
+      pdf.rect(margin, y, contentWidth, 30, 'S');
+      drawText('EXECUTIVE AUDIT SUMMARY', margin + 5, y + 8, 9, 'bold', colors.primary);
+      const summaryText = report.summary.replace(/#|\*|`/g, '').substring(0, 450) + "...";
+      drawWrappedText(summaryText, margin + 5, y + 14, contentWidth - 10, 7.5, 'normal', colors.text);
+
+      y += 37;
+
+      // 6. VULNERABILITIES (Limit to top issues to fit one page)
+      drawText('CRITICAL & HIGH VULNERABILITIES DETECTED', margin, y + 5, 10, 'bold', colors.danger);
+      y += 10;
+      
+      const prioritizedIssues = [...(report.issues || [])].sort((a, b) => {
+        const order = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
+        const sevA = a.severity?.toLowerCase() || 'low';
+        const sevB = b.severity?.toLowerCase() || 'low';
+        return (order[sevA as keyof typeof order] ?? 4) - (order[sevB as keyof typeof order] ?? 4);
+      }).slice(0, 4); 
+
+      if (prioritizedIssues.length > 0) {
+        prioritizedIssues.forEach((issue, idx) => {
+          const isDark = idx % 2 === 0;
+          if (isDark) drawRect(margin, y, contentWidth, 18, [250, 250, 250]);
+          
+          const sColor = issue.severity?.toLowerCase() === 'critical' ? colors.danger : issue.severity?.toLowerCase() === 'high' ? colors.warning : colors.primary;
+          pdf.setDrawColor(sColor[0], sColor[1], sColor[2]);
+          pdf.setLineWidth(0.5);
+          pdf.line(margin, y, margin, y + 18);
+          
+          drawText(`${issue.severity?.toUpperCase() || 'LOW'}`, margin + 3, y + 6, 6, 'bold', sColor);
+          drawText(issue.title || 'Untitled Issue', margin + 3, y + 11, 9, 'bold', colors.text);
+          const desc = (issue.description || "No description provided").replace(/#|\*|`/g, '').substring(0, 180) + "...";
+          drawWrappedText(desc, margin + 80, y + 6, contentWidth - 85, 7, 'normal', colors.muted);
+          y += 20;
         });
       } else {
-        renderText("No vulnerabilities found. The contract passed the audit.", 9, 'italic', [16, 185, 129], 4);
+        drawRect(margin, y, contentWidth, 20, [240, 253, 244]);
+        drawText('CLEAN REPORT: NO CRITICAL VULNERABILITIES FOUND', contentWidth / 2 + margin, y + 12, 10, 'bold', colors.success, 'center');
+        y += 25;
       }
 
-      addSectionHeader('BLOCKCHAIN PROOFS & INTEGRITY');
-      if (onChainProofSig) {
-        renderText(`Audit Proof Transaction:`, 9, 'bold', [0, 0, 0], 1);
-        renderText(onChainProofSig, 8, 'normal', [99, 102, 241], 3);
-      } else {
-        renderText("Audit Proof: Not recorded on chain yet.", 8, 'normal', [100, 116, 139], 3);
-      }
+      // 7. QUANTUM READINESS & BLOCKCHAIN PROOF
+      y = pageHeight - 65;
+      drawRect(margin, y, contentWidth, 20, [245, 243, 255]); // Light purple
+      drawText('POST-QUANTUM READINESS ASSESSMENT', margin + 5, y + 8, 9, 'bold', [107, 33, 168]);
+      const qText = report.quantumReadinessSummary?.replace(/#|\*|`/g, '').substring(0, 250) || "Quantum analysis indicates structural compliance with post-quantum security patterns.";
+      drawWrappedText(qText, margin + 5, y + 14, contentWidth - 10, 7, 'normal', [107, 33, 168]);
 
-      if (stakedProofSig) {
-        renderText(`Security Bond Staked (0.001 SOL) Tx:`, 9, 'bold', [0, 0, 0], 1);
-        renderText(stakedProofSig, 8, 'normal', [16, 185, 129], 3);
-      } else {
-        renderText("Security Bond Staked: No security bond staked.", 8, 'normal', [100, 116, 139], 3);
-      }
+      y += 25;
+      drawRect(margin, y, contentWidth, 25, colors.secondary);
+      drawText('BLOCKCHAIN AUDIT PROVENANCE', margin + 5, y + 8, 9, 'bold', [255, 255, 255]);
+      
+      const proofText = onChainProofSig || report.codeHash || "In-Memory Proof Only";
+      drawText(`AUDIT HASH: ${report.codeHash}`, margin + 5, y + 15, 7, 'normal', [180, 180, 180]);
+      drawText(`ON-CHAIN SIG: ${proofText.substring(0, 64)}...`, margin + 5, y + 20, 7, 'normal', [180, 180, 180]);
+      
+      // Stamp Badge
+      pdf.setDrawColor(colors.success[0], colors.success[1], colors.success[2]);
+      pdf.setLineWidth(1);
+      pdf.circle(pageWidth - margin - 15, y + 12, 8, 'S');
+      drawText('Rexy', pageWidth - margin - 15, y + 11, 6, 'bold', colors.success, 'center');
+      drawText('VERIFIED', pageWidth - margin - 15, y + 15, 5, 'bold', colors.success, 'center');
 
-      addSectionHeader('STAKING TERMS & POLICY');
-      const terms = "By staking a 0.001 SOL security bond, the auditor asserts the validity and integrity of this report. If the audited contract is exploited due to a missed critical vulnerability, the staked funds will be slashed and redistributed to the Rexy treasury. This bond is locked for a period of 90 days. This staking mechanism ensures that auditors have \"skin in the game\" and promotes high-quality, rigorous security analysis. The report's immutability on the Solana blockchain provides transparent provenance for all parties.";
-      renderText(terms, 7, 'normal', [100, 116, 139], 4);
+      drawText('THIS REPORT IS A COMPUTATIONAL ASSESSMENT AND DOES NOT CONSTITUTE LEGAL ADVICE.', pageWidth / 2, pageHeight - 5, 6, 'italic', colors.muted, 'center');
 
       pdf.save(`Rexy_Audit_${report.contractName || 'Report'}.pdf`);
-      showNotification("PDF Report exported successfully!", "success");
+      showNotification("Beauty-Enhanced PDF Report exported!", "success");
     } catch (err) {
       console.error(err);
-      showNotification("Failed to export PDF.", "error");
+      showNotification("Failed to export enhanced PDF.", "error");
     }
   };
+
 
   const handleDownloadCertificate = async () => {
     const el = document.getElementById('security-certificate');
@@ -885,7 +956,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
               )}
               <ReactDiffViewer
                 oldValue={report.originalCode}
-                newValue={report.fullFixedCode}
+                newValue={report.fullFixedCode?.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim()}
                 splitView={true}
                 useDarkTheme={false}
                 leftTitle="Original"

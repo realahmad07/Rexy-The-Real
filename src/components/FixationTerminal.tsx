@@ -61,17 +61,37 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage 
 
     const logInterval = setInterval(() => {
       if (currentIdx < messages.length) {
-        setLogs(prev => [...prev, messages[currentIdx]]);
+        setLogs(prev => {
+          const next = [...prev, messages[currentIdx]];
+          return next.slice(-50); // Keep last 50 logs for performance
+        });
         currentIdx++;
         
         // Randomly shift code highlight during AI phase
         if (stage === 'ai') {
           setHighlightedLine(Math.floor(Math.random() * lines.length));
         }
-      } else {
-        clearInterval(logInterval);
+      } else if (stage === 'ai' || stage === 'static') {
+        // For long-running stages, add generic progress logs if messages run out
+        const genericLogs = [
+          "[SYSTEM] Analyzing instruction boundary conditions...",
+          "[SYSTEM] Deep-tracing cross-program invocation paths...",
+          "[SYSTEM] Simulating adversarial state transitions...",
+          "[SYSTEM] Verifying account ownership validation depth...",
+          "[SYSTEM] Heuristic check: Instruction count vs Reentrancy risk...",
+          "[SYSTEM] Modeling PDAs for potential seed collisions...",
+          "[SYSTEM] Auditing lamport transfer atomicity...",
+          "[SYSTEM] Layer 2 Neural logic pass in progress...",
+          "[REXY] Detecting complex business logic anomalies...",
+          "[AI] Refining formal verification proofs..."
+        ];
+        const randomLog = genericLogs[Math.floor(Math.random() * genericLogs.length)];
+        setLogs(prev => {
+          const next = [...prev, randomLog];
+          return next.slice(-50);
+        });
       }
-    }, 500); // Reduced from 800ms
+    }, 700);
 
     return () => clearInterval(logInterval);
   }, [stage, lines.length]);

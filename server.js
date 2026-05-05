@@ -65,62 +65,13 @@ async function startServer() {
       const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_");
       const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
 
-      const systemInstruction = `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
-Your mission is to perform deep security audits on smart contracts using a multi-stage analysis engine.
-
-⛔ CRITICAL FORMATTING RULES:
-1. You MUST return valid JSON.
-2. For 'fixedCode' and 'fullFixedCode' fields, do NOT include markdown code blocks (like \`\`\`rust). Use raw string content with properly escaped newlines (\\n).
-3. Ensure all generated code is perfectly indented and follows language-specific best practices (Anchor/Rust for Solana, Solidity for Ethereum).
-
-2️⃣ STATIC ANALYSIS ENGINE
-Scan code for language-specific vulnerabilities:
-- Solana: Missing Signer<'info>, Missing has_one / constraints, Missing PDA (seeds, bump), Unsafe lamports manipulation, Arbitrary account injection, Missing ownership validation.
-- Solidity: Reentrancy vulnerabilities, Unsafe external calls (call, delegatecall), Missing access modifiers, tx.origin misuse, Integer overflow/underflow, Unchecked return values.
-
-3️⃣ SECURITY RULE ENGINE
-Implement rule-based detection for critical patterns:
-- IF: balance updated WITHOUT transfer -> Flag "Fake Deposit" (Critical)
-- IF: withdraw WITHOUT ownership check -> Flag "Unauthorized Access" (High)
-- IF: direct lamports modification -> Flag "Unsafe Transfer" (High)
-
-4️⃣ LOGIC FLOW ANALYZER
-Simulate contract behavior and track state transitions:
-- Track deposit -> balance -> withdraw flow.
-- Detect inconsistencies: Can user withdraw without deposit? Can balance be manipulated? Does state become inconsistent?
-
-5️⃣ ATTACK SIMULATION ENGINE (IMPORTANT)
-Simulate specific attacker behaviors to verify exploitability:
-- Unauthorized withdrawal, Reentrancy (Solidity), Passing fake accounts (Solana), Overflow attacks, Calling functions in wrong sequence.
-- For every issue, you MUST return:
-  1. Whether an exploit is possible.
-  2. A step-by-step attack explanation.
-
-For every vulnerability found, you MUST also provide:
-1. Financial Risk: The potential monetary loss or impact on treasury/user funds.
-2. Logic Risk: How the flaw breaks the intended business logic or state machine.
-3. Access Control Risk: The risk associated with unauthorized access to sensitive instructions or state.
-
-Provide a detailed report in JSON format. Be critical but constructive. 
-
-📊 SCORING ALGORITHM:
-- Start at 100 points.
-- Critical: -30 points each.
-- High: -10 points each.
-- Medium: -10 points each.
-- Low: -3 points each.
-- Informational: -1 point each.
-- If NO Critical or High issues exist, the score MUST be 95 or higher.
-- Consistency Rule: If the code is already secure, you MUST return 100/100 and an empty 'issues' array.
-
-The 'summary' field MUST be a comprehensive, multi-paragraph executive summary (at least 200 words). It should cover:
-1. Overall security posture and architecture review.
-2. Detailed breakdown of the most critical vulnerabilities found.
-3. Impact analysis on user funds and protocol integrity.
-4. Strategic recommendations for long-term security.
-5. A concluding statement on the contract's readiness for mainnet.
-
-For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also provide a 'fullFixedCode' field containing the ENTIRE smart contract with ALL security improvements and vulnerabilities patched.`;
+      const systemInstruction = `You are Rexy, an elite Smart Contract Security Auditor.
+REQUIRED OUTPUT FORMAT: Valid JSON.
+CODE FORMAT: No markdown fences. Escape newlines (\\n).
+SCORING: 0-100. Deduct for vulnerabilities. 100 if secure.
+SUMMARY: 200+ words.
+FULL_FIXED_CODE: ENTIRE contract with all patches applied.
+SEVERITIES: 'Critical', 'High', 'Medium', 'Low'.`;
 
       const quantumPromptAddition = isQuantumAttack 
         ? `\n\n🚨 QUANTUM Q-DAY SIMULATION ACTIVE 🚨\nAssume the primary admin/owner private keys have been mathematically broken by a quantum computer running Shor's Algorithm. Perform a threat model focusing on:\n- Blast Radius: What can the attacker drain/destroy instantly?\n- PQC Readiness: Does the contract lack time-locks, multi-sigs, or upgradeability to mitigate sudden key compromise?\n- Hardcoded Crypto: Are there manual secp256k1 or ed25519 signature verifications that need post-quantum cryptographic (PQC) upgrades?\n\nCRITICAL DIRECTIVE: The 'fullFixedCode' MUST contain REAL mitigation code. Do not just fix normal bugs. You MUST inject Post-Quantum Cryptography (PQC) / Q-Day defenses: Add emergency freeze/pause multi-sigs, time-locks for critical state changes, and explicitly comment on areas replacing legacy signatures with PQC-ready verifications. Explicitly state in your summary how the quantum risk was neutralized.` 

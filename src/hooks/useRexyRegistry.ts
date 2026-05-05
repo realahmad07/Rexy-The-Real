@@ -2,23 +2,20 @@
 // Rexy AI Auditor — React Hook for On-Chain Registry + Staked Certificates
 // Place at: src/hooks/useRexyRegistry.js
 
+import { Buffer } from "buffer";
 import { useCallback, useState } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { Program, AnchorProvider, BN, web3 } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { sha256 } from "js-sha256"; // npm install js-sha256
+import { sha256 } from "js-sha256"; 
 
 import { getClusterParam, getTreasuryPublicKey } from "../services/solanaService";
 
-// ─── Replace with your deployed program ID ───────────────────────────────────
 const PROGRAM_ID = new PublicKey(
   "3UTjHx2fYwfq1Tm6TgxgnjEuFYnBXanAJSkAux67THi4"
 );
 
-// ─── IDL — paste your generated IDL JSON here after `anchor build` ───────────
-// import IDL from "../idl/rexy_registry.json";
-// For now we'll use a minimal inline IDL shape — replace with full IDL post-build
-const IDL = {
+const IDL: any = {
   version: "0.1.0",
   name: "rexy_registry",
   instructions: [
@@ -82,7 +79,7 @@ const IDL = {
 };
 
 // ─── Helper: Hash audit report to 32 bytes ───────────────────────────────────
-export function hashReport(reportJson) {
+export function hashReport(reportJson: any) {
   const hashHex = sha256(JSON.stringify(reportJson));
   const hashBytes = new Uint8Array(32);
   for (let i = 0; i < 32; i++) {
@@ -92,7 +89,7 @@ export function hashReport(reportJson) {
 }
 
 // ─── Helper: Fallback for invalid Program IDs ────────────────────────────────
-export function toProgramIdPublicKey(inputStr) {
+export function toProgramIdPublicKey(inputStr: any): PublicKey {
   if (inputStr instanceof PublicKey) return inputStr;
   try {
     return new PublicKey(inputStr);
@@ -108,7 +105,7 @@ export function toProgramIdPublicKey(inputStr) {
 }
 
 // ─── Helper: Derive PDAs ──────────────────────────────────────────────────────
-export async function deriveAuditPDA(auditorPubkey, programIdAudited) {
+export async function deriveAuditPDA(auditorPubkey: PublicKey, programIdAudited: any) {
   const programIdString = typeof programIdAudited === "string" ? programIdAudited : programIdAudited.toString();
   const [pda, bump] = await PublicKey.findProgramAddress(
     [
@@ -121,7 +118,7 @@ export async function deriveAuditPDA(auditorPubkey, programIdAudited) {
   return { pda, bump };
 }
 
-export async function deriveVaultPDA(auditRecordPubkey) {
+export async function deriveVaultPDA(auditRecordPubkey: PublicKey) {
   const [pda] = await PublicKey.findProgramAddress(
     [new TextEncoder().encode("vault"), auditRecordPubkey.toBytes()],
     PROGRAM_ID
@@ -135,15 +132,15 @@ export function useRexyRegistry() {
   const wallet = useWallet();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [txSignature, setTxSignature] = useState(null);
-  const [error, setError] = useState(null);
+  const [txSignature, setTxSignature] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Build Anchor program instance
   const getProgram = useCallback(() => {
     if (!wallet.publicKey || !wallet.signTransaction) {
       throw new Error("Wallet not connected");
     }
-    const provider = new AnchorProvider(connection, wallet, {
+    const provider = new AnchorProvider(connection, wallet as any, {
       preflightCommitment: "confirmed",
     });
     return new Program(IDL, PROGRAM_ID, provider);
@@ -151,19 +148,18 @@ export function useRexyRegistry() {
 
   // ── Register Audit On-Chain ──────────────────────────────────────────────
   const registerAudit = useCallback(
-    async ({ programIdAudited, reportData, score, findings }) => {
+    async ({ programIdAudited, reportData, score, findings }: { programIdAudited: any, reportData: any, score: number, findings: any[] }) => {
       setIsLoading(true);
       setError(null);
       setTxSignature(null);
 
       try {
-        const auditorKey = wallet.publicKey;
+        const auditorKey = wallet.publicKey!;
         // Ensure string is passed
         const targetProgramString = typeof programIdAudited === 'string' ? programIdAudited : programIdAudited.toString();
-        const reportHash = hashReport(reportData);
-
-        const criticalCount = findings.filter((f) => f.severity === "Critical").length;
-        const highCount = findings.filter((f) => f.severity === "High").length;
+        
+        const criticalCount = findings.filter((f: any) => f.severity === "Critical").length;
+        const highCount = findings.filter((f: any) => f.severity === "High").length;
         
         const memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
         const transaction = new web3.Transaction().add(
@@ -190,7 +186,7 @@ export function useRexyRegistry() {
           auditRecordPubkey: auditRecord.toBase58(),
           explorerUrl: `https://explorer.solana.com/tx/${tx}${getClusterParam()}`,
         };
-      } catch (err) {
+      } catch (err: any) {
         console.error("registerAudit error:", err);
         const msg = err.message || "Transaction failed";
         setError(msg);
@@ -199,12 +195,12 @@ export function useRexyRegistry() {
         setIsLoading(false);
       }
     },
-    [getProgram, wallet.publicKey]
+    [connection, wallet]
   );
 
   // ── Stake Certificate ────────────────────────────────────────────────────
   const stakeCertificate = useCallback(
-    async ({ programIdAudited }) => {
+    async ({ programIdAudited }: { programIdAudited: any }) => {
       setIsLoading(true);
       setError(null);
 
@@ -252,7 +248,7 @@ export function useRexyRegistry() {
           explorerUrl: `https://explorer.solana.com/tx/${tx}${getClusterParam()}`,
           message: "0.001 SOL staked as 90-day security bond ✅",
         };
-      } catch (err) {
+      } catch (err: any) {
         console.error("stakeCertificate error:", err);
         const msg = err.message || "Transaction failed";
         setError(msg);
@@ -261,19 +257,19 @@ export function useRexyRegistry() {
         setIsLoading(false);
       }
     },
-    [getProgram, wallet.publicKey, connection]
+    [connection, wallet]
   );
 
   // ── Fetch Audit Record from Chain ────────────────────────────────────────
   const fetchAuditRecord = useCallback(
-    async ({ auditorPubkey, programIdAudited }) => {
+    async ({ auditorPubkey, programIdAudited }: { auditorPubkey: any, programIdAudited: any }) => {
       try {
         const program = getProgram();
         const { pda } = await deriveAuditPDA(
           toProgramIdPublicKey(auditorPubkey),
           programIdAudited
         );
-        const record = await program.account.auditRecord.fetch(pda);
+        const record = await (program.account.auditRecord as any).fetch(pda);
         return {
           success: true,
           record: {
@@ -297,12 +293,12 @@ export function useRexyRegistry() {
 
   // ── Report Exploit ───────────────────────────────────────────────────────
   const reportExploit = useCallback(
-    async ({ auditorPubkey, programIdAudited, exploitTxSignature }) => {
+    async ({ auditorPubkey, programIdAudited, exploitTxSignature }: { auditorPubkey: any, programIdAudited: any, exploitTxSignature: string }) => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const auditorKey = wallet.publicKey;
+        const auditorKey = wallet.publicKey!;
         
         const memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
         const transaction = new web3.Transaction().add(
@@ -321,14 +317,14 @@ export function useRexyRegistry() {
 
         setTxSignature(tx);
         return { success: true, signature: tx };
-      } catch (err) {
+      } catch (err: any) {
         setError(err.message);
         return { success: false, error: err.message };
       } finally {
         setIsLoading(false);
       }
     },
-    [getProgram, wallet.publicKey]
+    [connection, wallet]
   );
 
   return {

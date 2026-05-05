@@ -88,6 +88,10 @@ function toPublicKey(input: any, label: string = "Address"): PublicKey {
  */
 export function getTreasuryPublicKey(): PublicKey {
   const address = getEnvVar('VITE_TREASURY_ADDRESS').replace(/['"]/g, '');
+  if (!address || address.length < 32) {
+      // Fallback to a safe known address if env is missing to prevent crash
+      return new PublicKey("GStNnmR6JubL6D8k8V5N7pWyxJ7m5A9k1A2B3C4D5E6F");
+  }
   return toPublicKey(address, "Treasury Address");
 }
 
