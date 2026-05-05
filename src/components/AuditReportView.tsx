@@ -32,7 +32,24 @@ const IssueItem: React.FC<{ issue: AuditIssue; index: number; onCopy: (code: str
 
   const cleanCode = (code?: string) => {
     if (!code) return "";
-    return code.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
+    // Remove markdown fences and common AI prefixes/suffixes
+    let cleaned = code.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '');
+    
+    // Split into lines and filter out conversational junk at the very start
+    const lines = cleaned.split('\n');
+    let firstActualCodeLine = 0;
+    while (firstActualCodeLine < lines.length) {
+      const line = lines[firstActualCodeLine].trim();
+      if (line.match(/^(Here is|This is|Fixed|Revised|Patched|the code|Below|Certainly|Sure|OK)/i) || (line.length < 50 && line.endsWith(':'))) {
+        firstActualCodeLine++;
+      } else if (line === "") {
+        firstActualCodeLine++;
+      } else {
+        break;
+      }
+    }
+    
+    return lines.slice(firstActualCodeLine).join('\n').trim();
   };
 
   const getSeverityStyles = (severity: string) => {
@@ -277,7 +294,7 @@ const ScoreMeter: React.FC<{ score: number }> = ({ score }) => {
 export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onApplyFix, currentUser }) => {
   const { connection } = useConnection();
   const wallet = useWallet();
-  const { stakeCertificate } = useRexyRegistry();
+  const { registerAudit, stakeCertificate } = useRexyRegistry();
   const [onChainProofSig, setOnChainProofSig] = useState<string | null>(report.onChainProof || null);
   const [stakedProofSig, setStakedProofSig] = useState<string | null>((report as any).stakedProofSig || null);
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
@@ -304,21 +321,32 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const risk = getRiskLevel(report.score);
 
   const handleRecordOnChain = async () => {
-    if (!wallet.publicKey || !wallet.sendTransaction) {
+    if (!wallet.publicKey) {
       showNotification("Please connect your wallet to record proof on-chain.", "error");
       return;
     }
     setIsRecordingOnChain(true);
     try {
-      let signature = "";
-      const { recordAuditOnChain } = await import('../services/solanaService');
-      signature = await recordAuditOnChain(wallet, report.codeHash || 'unknown', report.score, connection);
+      const result = await registerAudit({
+        programIdAudited: report.contractName,
+        reportData: report,
+        score: report.score,
+        findings: report.issues || []
+      });
       
-      setOnChainProofSig(signature);
-      if (report.id) {
-        await updateDoc(doc(db, 'audits', report.id), { onChainProof: signature });
+      if (result.success) {
+        setOnChainProofSig(result.signature || null);
+        if (report.id) {
+          try {
+            await updateDoc(doc(db, 'audits', report.id), { onChainProof: result.signature });
+          } catch (e) {
+            console.warn("Firestore update skipped", e);
+          }
+        }
+        showNotification("Audit proof recorded in Rexy Registry successfully!", "success");
+      } else {
+        showNotification("Recording failed: " + result.error, "error");
       }
-      showNotification("Audit proof recorded on Solana blockchain successfully!", "success");
     } catch (err: any) {
       showNotification(err.message || "Failed to record proof on-chain.", "error");
     } finally {
@@ -513,32 +541,42 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
 
       y += 37;
 
-      // 6. VULNERABILITIES (Limit to top issues to fit one page)
-      drawText('CRITICAL & HIGH VULNERABILITIES DETECTED', margin, y + 5, 10, 'bold', colors.danger);
+      // 6. VULNERABILITIES 
+      drawText('SECURITY VULNERABILITIES DETECTED', margin, y + 5, 10, 'bold', colors.danger);
       y += 10;
       
-      const prioritizedIssues = [...(report.issues || [])].sort((a, b) => {
-        const order = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
-        const sevA = a.severity?.toLowerCase() || 'low';
-        const sevB = b.severity?.toLowerCase() || 'low';
-        return (order[sevA as keyof typeof order] ?? 4) - (order[sevB as keyof typeof order] ?? 4);
-      }).slice(0, 4); 
+      const allIssues = report.issues || [];
+      if (allIssues.length > 0) {
+        allIssues.forEach((issue, idx) => {
+          // Check if we need a new page
+          if (y > pageHeight - 40) {
+            pdf.addPage();
+            drawRect(0, 0, pageWidth, pageHeight, colors.bg);
+            pdf.setDrawColor(colors.line[0], colors.line[1], colors.line[2]);
+            pdf.setLineWidth(0.5);
+            pdf.rect(margin / 2, margin / 2, pageWidth - margin, pageHeight - margin, 'S');
+            y = margin + 10;
+            drawText('CONTINUED: VULNERABILITY AUDIT', margin, y, 8, 'bold', colors.muted);
+            y += 10;
+          }
 
-      if (prioritizedIssues.length > 0) {
-        prioritizedIssues.forEach((issue, idx) => {
           const isDark = idx % 2 === 0;
-          if (isDark) drawRect(margin, y, contentWidth, 18, [250, 250, 250]);
+          if (isDark) drawRect(margin, y, contentWidth, 22, [250, 250, 250]);
           
-          const sColor = issue.severity?.toLowerCase() === 'critical' ? colors.danger : issue.severity?.toLowerCase() === 'high' ? colors.warning : colors.primary;
+          const sevStr = (issue.severity || 'low').toLowerCase();
+          const sColor = sevStr === 'critical' || sevStr === 'high' ? colors.danger : colors.primary;
+          
           pdf.setDrawColor(sColor[0], sColor[1], sColor[2]);
-          pdf.setLineWidth(0.5);
-          pdf.line(margin, y, margin, y + 18);
+          pdf.setLineWidth(1);
+          pdf.line(margin, y, margin, y + 22);
           
-          drawText(`${issue.severity?.toUpperCase() || 'LOW'}`, margin + 3, y + 6, 6, 'bold', sColor);
-          drawText(issue.title || 'Untitled Issue', margin + 3, y + 11, 9, 'bold', colors.text);
-          const desc = (issue.description || "No description provided").replace(/#|\*|`/g, '').substring(0, 180) + "...";
-          drawWrappedText(desc, margin + 80, y + 6, contentWidth - 85, 7, 'normal', colors.muted);
-          y += 20;
+          drawText(`${issue.severity?.toUpperCase() || 'INFO'}`, margin + 3, y + 6, 7, 'bold', sColor);
+          drawText(issue.title || 'Untitled Issue', margin + 3, y + 12, 10, 'bold', colors.text);
+          
+          const rawDesc = (issue.description || "No description provided").replace(/#|\*|`/g, '');
+          const desc = rawDesc.length > 180 ? rawDesc.substring(0, 180) + "..." : rawDesc;
+          drawWrappedText(desc, margin + 85, y + 6, contentWidth - 90, 7.5, 'normal', colors.muted);
+          y += 24;
         });
       } else {
         drawRect(margin, y, contentWidth, 20, [240, 253, 244]);
