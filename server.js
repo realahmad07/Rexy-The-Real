@@ -46,7 +46,7 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   app.use(cors());
   app.use(express.json());
@@ -128,15 +128,14 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
       };
 
       const auditWithGemini = async (key) => {
-        const { GoogleGenerativeAI } = await import("@google/generai");
-        const genAI = new GoogleGenerativeAI(key);
-        const model = genAI.getGenerativeModel({ 
-          model: "gemini-1.5-pro",
-          generationConfig: { responseMimeType: "application/json" }
+        const { GoogleGenAI } = await import("@google/genai");
+        const ai = new GoogleGenAI({ apiKey: key });
+        const response = await ai.models.generateContent({
+          model: "gemini-3.1-pro-preview",
+          contents: [systemInstruction, prompt],
+          config: { responseMimeType: "application/json" }
         });
-        const result = await model.generateContent([systemInstruction, prompt]);
-        const response = await result.response;
-        return JSON.parse(response.text());
+        return JSON.parse(response.text);
       };
 
       let reportData;
@@ -197,21 +196,18 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
       const systemInstruction = "You are Rexy Copilot, a highly advanced Smart Contract Security Engineer and Web3 expert, specifically focused on the Solana ecosystem. You are witty, sharp, and slightly cheeky but always incredibly accurate. You help developers find bugs, write secure Anchor (Rust) code, and understand post-quantum cryptography mitigation. Keep responses concise unless coding is required. Provide perfectly formatted markdown for any code snippets.";
 
       const chatWithGemini = async (key) => {
-        const { GoogleGenerativeAI } = await import("@google/generai");
-        const genAI = new GoogleGenerativeAI(key);
-        const model = genAI.getGenerativeModel({ 
-          model: "gemini-1.5-pro",
-          systemInstruction: systemInstruction,
-        });
-        const chat = model.startChat({
+        const { GoogleGenAI } = await import("@google/genai");
+        const ai = new GoogleGenAI({ apiKey: key });
+        const chat = ai.chats.create({
+          model: "gemini-3.1-pro-preview",
+          config: { systemInstruction: systemInstruction },
           history: history.map(h => ({
             role: h.role === "model" ? "model" : "user",
             parts: [{ text: h.parts[0].text }]
           })),
         });
         const result = await chat.sendMessage(message);
-        const response = await result.response;
-        return response.text();
+        return result.text;
       };
 
       const chatWithGroq = async (key) => {

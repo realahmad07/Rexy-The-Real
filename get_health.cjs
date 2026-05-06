@@ -1,5 +1,6 @@
 var http = require('http');
-http.get('http://localhost:3000/api/health', (resp) => {
+const port = process.env.PORT || 3000;
+http.get(`http://localhost:${port}/api/health`, (resp) => {
   let data = '';
   resp.on('data', (chunk) => { data += chunk; });
   resp.on('end', () => { console.log("DATA:", data); });
