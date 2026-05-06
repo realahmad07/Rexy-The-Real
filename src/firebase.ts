@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, query, where, onSnapshot, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, doc, setDoc, getDoc, collection, query, where, onSnapshot, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 export enum OperationType {
@@ -57,5 +57,10 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
+
+// Use initializeFirestore with long polling to bypass potential proxy/firewall issues in the preview environment
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, (firebaseConfig as any).firestoreDatabaseId || '(default)');
+
 export const googleProvider = new GoogleAuthProvider();

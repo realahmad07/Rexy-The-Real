@@ -19,8 +19,26 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [systemHealth, setSystemHealth] = useState<'online' | 'offline'>('online');
+  const [firebaseConnected, setFirebaseConnected] = useState(true);
 
   const isLoggedIn = isWalletLoggedIn || isGuestLoggedIn;
+
+  useEffect(() => {
+    const checkFirebaseHealth = async () => {
+      try {
+        const { getDocFromServer, doc } = await import('firebase/firestore');
+        await getDocFromServer(doc(db, 'test', 'connection'));
+        setFirebaseConnected(true);
+      } catch (err) {
+        setFirebaseConnected(false);
+        console.warn("Firestore connection check failed. Client may be offline.");
+      }
+    };
+
+    checkFirebaseHealth();
+    const interval = setInterval(checkFirebaseHealth, 60000); // Check once a minute
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -161,11 +179,19 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full border border-rexy-border">
-              <div className={`w-2 h-2 rounded-full animate-pulse transition-colors ${systemHealth === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-              <span className={`text-[9px] font-black uppercase tracking-widest ${systemHealth === 'online' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {systemHealth === 'online' ? 'Engine Online' : 'Engine Offline'}
-              </span>
+            <div className="flex flex-col items-end">
+              <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full border border-rexy-border">
+                <div className={`w-2 h-2 rounded-full animate-pulse transition-colors ${systemHealth === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                <span className={`text-[8px] font-black uppercase tracking-widest ${systemHealth === 'online' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  API: {systemHealth === 'online' ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 mt-1 bg-slate-50 rounded-full border border-rexy-border">
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse transition-colors ${firebaseConnected ? 'bg-indigo-500' : 'bg-amber-500'}`} />
+                <span className={`text-[7px] font-black uppercase tracking-widest ${firebaseConnected ? 'text-indigo-600' : 'text-amber-600'}`}>
+                  Network: {firebaseConnected ? 'Synced' : 'Offline Mode'}
+                </span>
+              </div>
             </div>
             <WalletMultiButton className="!bg-rexy-primary hover:!bg-indigo-500 !h-10 !px-6 !rounded-xl !text-xs !font-bold transition-all shadow-lg shadow-rexy-primary/20" />
           </div>
@@ -199,9 +225,9 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-rexy-border shadow-sm">
-              <div className={`w-2 h-2 rounded-full animate-pulse transition-colors ${systemHealth === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-              <span className={`text-[9px] font-black uppercase tracking-widest ${systemHealth === 'online' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                System Status: {systemHealth === 'online' ? 'Operational' : 'Degraded'}
+              <div className={`w-2 h-2 rounded-full animate-pulse transition-colors ${firebaseConnected ? 'bg-indigo-500' : 'bg-amber-500'}`} />
+              <span className={`text-[9px] font-black uppercase tracking-widest ${firebaseConnected ? 'text-indigo-600' : 'text-amber-600'}`}>
+                Database: {firebaseConnected ? 'Connected' : 'Sync Pending'}
               </span>
             </div>
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
