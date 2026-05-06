@@ -171,6 +171,9 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
         reportData.issues = reportData.issues || [];
         reportData.provider = usedProvider;
         
+        // Artificial delay for realism (approx 5-8 seconds total with AI processing)
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
         return res.json(reportData);
       }
 
