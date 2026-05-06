@@ -9,6 +9,10 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
     ],
+    assetsInclude: ['**/*.mp4', '**/*.jpg', '**/*.png'],
+    build: {
+      assetsInlineLimit: 0, // Ensure videos/images are not converted to base64
+    },
     define: {
       'process.env.VITE_HELIUS_API_KEY': JSON.stringify(env.VITE_HELIUS_API_KEY || process.env.VITE_HELIUS_API_KEY || ""),
       'process.env.VITE_TREASURY_ADDRESS': JSON.stringify(env.VITE_TREASURY_ADDRESS || process.env.VITE_TREASURY_ADDRESS || ""),

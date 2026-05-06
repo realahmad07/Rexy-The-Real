@@ -14,10 +14,13 @@ import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firest
 
 const App: React.FC = () => {
   const { connected, publicKey } = useWallet();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isWalletLoggedIn, setIsWalletLoggedIn] = useState(false);
+  const [isGuestLoggedIn, setIsGuestLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [systemHealth, setSystemHealth] = useState<'online' | 'offline'>('online');
+
+  const isLoggedIn = isWalletLoggedIn || isGuestLoggedIn;
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -41,7 +44,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (connected && publicKey) {
-      setIsLoggedIn(true);
+      setIsWalletLoggedIn(true);
       
       // Save user profile to Firestore
       const saveUserProfile = async () => {
@@ -86,7 +89,7 @@ const App: React.FC = () => {
         setShowOnboarding(true);
       }
     } else {
-      setIsLoggedIn(false);
+      setIsWalletLoggedIn(false);
     }
   }, [connected, publicKey]);
 
@@ -96,7 +99,7 @@ const App: React.FC = () => {
   };
 
   if (!isLoggedIn) {
-    return <Login onLogin={() => setIsLoggedIn(true)} />;
+    return <Login onLogin={() => setIsGuestLoggedIn(true)} />;
   }
 
   return (

@@ -13,6 +13,13 @@ Rexy is an AI-powered smart contract security layer designed to provide real-tim
 - **Audit by Address**: UX-first approach allowing users to fetch contract source code directly from a Solana address via RPC/Helius.
 - **AI-Powered Patching**: One-click "Apply All Fixes" feature that generates secure, production-ready code with syntax-highlighted diffs.
 
+## 👩‍⚖️ Access Instructions for Judges
+If you do not wish to connect a real Solana wallet, you can use the **Auditor Credentials** access:
+- **Button**: Click "Access with Auditor Credentials" on the login screen.
+- **Username**: `judge`
+- **Password**: `rexy-2026`
+*(Note: Guest access provides full AI auditing simulation but disables actual on-chain transaction signing)*.
+
 ## 🛠️ Technical Stack
 - **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion, Zustand/Context API.
 - **AI Engine**: Groq Llama-3 (Deep Brain Engine) & Google Gemini 1.5 Pro.

@@ -87,10 +87,11 @@ const InfoView: React.FC = () => {
                   loop 
                   muted 
                   playsInline
-                  preload="auto"
+                  preload="metadata"
                   className="w-full aspect-video object-cover"
                 >
                   <source src="/Backend.mp4" type="video/mp4" />
+                  <source src="/Live.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
@@ -272,7 +273,10 @@ const InfoView: React.FC = () => {
               <img 
                 src="/developer-dp.jpg" 
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad';
+                  const target = e.target as HTMLImageElement;
+                  if (!target.src.includes('dicebear')) {
+                    target.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad';
+                  }
                 }}
                 alt="Ahmad Hassan" 
                 className="relative w-32 h-32 rounded-full object-cover mb-4 ring-4 ring-rexy-primary/30 shadow-2xl z-10 bg-slate-100"
