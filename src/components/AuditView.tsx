@@ -19,6 +19,7 @@ const AuditView: React.FC = () => {
     auditCode: code, setAuditCode: setCode,
     auditAddress: address, setAuditAddress: setAddress,
     auditReport: report, setAuditReport: setReport,
+    firebaseConnected
   } = useAppState();
 
   const [loading, setLoading] = useState(false);
@@ -111,7 +112,7 @@ const AuditView: React.FC = () => {
         };
 
         // Save to Firestore if connected
-        if (connected && wallet.publicKey) {
+        if (connected && wallet.publicKey && firebaseConnected) {
           try {
             const docRef = await addDoc(collection(db, 'audits'), {
               ...auditData,
@@ -128,6 +129,8 @@ const AuditView: React.FC = () => {
               }
             }
           }
+        } else if (!firebaseConnected) {
+          console.warn("Database offline: Audit report not saved to cloud.");
         }
 
         setReport(auditData);

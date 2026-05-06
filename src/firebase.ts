@@ -63,4 +63,24 @@ export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 }, (firebaseConfig as any).firestoreDatabaseId || '(default)');
 
+// Validate Connection to Firestore
+async function testConnection() {
+  try {
+    console.log("Testing Firestore connection...");
+    // Attempting to resolve the database path manually if needed, but initializeFirestore should handle it.
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    console.log("Firestore connection successful.");
+  } catch (error) {
+    console.error("Firestore connectivity test failed:", error);
+    if(error instanceof Error && (error.message.includes('offline') || error.message.includes('unavailable'))) {
+      console.warn("Firestore appears to be unreachable. This might be due to a temporary network issue or incorrect database ID.");
+    }
+  }
+}
+
+// Only run on client
+if (typeof window !== 'undefined') {
+  testConnection();
+}
+
 export const googleProvider = new GoogleAuthProvider();

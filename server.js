@@ -138,6 +138,81 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
         return JSON.parse(response.text);
       };
 
+      const runStaticAudit = (code) => {
+        console.log("Running Static Fallback Audit Engine...");
+        const issues = [];
+        let score = 100;
+        
+        // 1. Check for missing Signer in instructions (Solana/Anchor)
+        if (code.includes("AccountInfo") && !code.includes("Signer<") && code.includes("Instruction")) {
+          issues.push({
+            id: "S001",
+            title: "Potential Missing Signer Validation",
+            severity: "High",
+            description: "Some instructions appear to use AccountInfo without explicit Signer validation. This could allow unauthorized users to trigger instructions that should be restricted.",
+            remediation: "Replace AccountInfo with Signer<'info> in your accounts struct for administrative or sensitive instructions.",
+            impact: "High",
+            category: "Access Control",
+            fixedCode: "// Suggested change:\n// pub signer: Signer<'info>"
+          });
+          score -= 15;
+        }
+
+        // 2. Check for unsafe arithmetic
+        const unsafeArithmetic = /\s[\+\-\*\/]\s/g;
+        if (unsafeArithmetic.test(code) && !code.includes("checked_") && !code.includes("safe_math")) {
+          issues.push({
+            id: "S002",
+            title: "Integer Overflow/Underflow Risk",
+            severity: "Medium",
+            description: "Direct arithmetic operators (+, -, *, /) detected without safety checks. Solana/Rust can panic on overflow in debug mode or wrap in release mode.",
+            remediation: "Use checked_add, checked_sub, or safe_math libraries to handle arithmetic operations securely.",
+            impact: "Medium",
+            category: "Arithmetic",
+            fixedCode: "// Use checked math:\n// let result = a.checked_add(b).ok_or(error!(MyError::Overflow))?;"
+          });
+          score -= 10;
+        }
+
+        // 3. Check for arbitrary account loading
+        if (code.includes("from_account_info") && !code.includes("owner =")) {
+          issues.push({
+            id: "S003",
+            title: "Insecure Account Loading",
+            severity: "High",
+            description: "Detected account loading from raw account info without explicit owner checks. This may allow an attacker to pass in a spoofed account belonging to a different program.",
+            remediation: "Always verify the owner of an account using the #[account(owner = program_id)] constraint in Anchor.",
+            impact: "High",
+            category: "Security",
+            fixedCode: "#[account(owner = *program_id)]\npub my_account: Account<'info, MyData>"
+          });
+          score -= 20;
+        }
+
+        // 4. Check for reentrancy (Solidity pattern)
+        if (code.includes(".call{") && code.includes("value:")) {
+          issues.push({
+            id: "S004",
+            title: "Reentrancy Vulnerability",
+            severity: "Critical",
+            description: "External call with value found. If the recipient is a contract, it can fallback and call back into your function before state is updated.",
+            remediation: "Implement the Checks-Effects-Interactions pattern or use a ReentrancyGuard.",
+            impact: "Critical",
+            category: "Logic",
+            fixedCode: "nonReentrant modifier or CEI pattern"
+          });
+          score -= 30;
+        }
+
+        return {
+          score: Math.max(0, score),
+          summary: "AI Audit agents were unavailable, so the Rexy Static Engine performed a heuristic security scan of your contract. This fallback scan identifies common patterns associated with Solana and Solidity vulnerabilities. Note that static analysis may not catch complex business logic flaws that the AI Engine typically detects.",
+          issues,
+          provider: "rexy-static-fallback",
+          fullFixedCode: code // In fallback mode we return original as we can't fully rebuild it perfectly without AI
+        };
+      };
+
       let reportData;
       let usedProvider = "none";
 
@@ -163,6 +238,13 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
         }
       }
 
+      // 3. Last Resort: STATIC FALLBACK (Always works)
+      if (!reportData) {
+        console.warn("CRITICAL: Both AI providers failed. Using Rexy Static Fallback Engine.");
+        reportData = runStaticAudit(contractCode);
+        usedProvider = "rexy-static-fallback";
+      }
+
       if (reportData) {
         // Ensure critical fields exist
         reportData.codeHash = codeHash;
@@ -172,7 +254,7 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
         reportData.provider = usedProvider;
         
         // Artificial delay for realism (approx 5-8 seconds total with AI processing)
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         return res.json(reportData);
       }

@@ -68,30 +68,48 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage 
         currentIdx++;
         
         // Randomly shift code highlight during AI phase
-        if (stage === 'ai') {
+        if (stage === 'ai' || stage === 'static') {
           setHighlightedLine(Math.floor(Math.random() * lines.length));
         }
-      } else if (stage === 'ai' || stage === 'static') {
-        // For long-running stages, add generic progress logs if messages run out
-        const genericLogs = [
-          "[SYSTEM] Analyzing instruction boundary conditions...",
-          "[SYSTEM] Deep-tracing cross-program invocation paths...",
-          "[SYSTEM] Simulating adversarial state transitions...",
-          "[SYSTEM] Verifying account ownership validation depth...",
-          "[SYSTEM] Heuristic check: Instruction count vs Reentrancy risk...",
-          "[SYSTEM] Modeling PDAs for potential seed collisions...",
-          "[SYSTEM] Auditing lamport transfer atomicity...",
-          "[SYSTEM] Layer 2 Neural logic pass in progress...",
-          "[REXY] Detecting complex business logic anomalies...",
-          "[AI] Refining formal verification proofs..."
-        ];
-        const randomLog = genericLogs[Math.floor(Math.random() * genericLogs.length)];
-        setLogs(prev => {
-          const next = [...prev, randomLog];
-          return next.slice(-50);
-        });
+      } else {
+        // For long-running stages or when messages run out, add generic progress logs
+        const genericLogsMap = {
+          payment: [
+            "[SOLANA] Awaiting cluster confirmation...",
+            "[RPC] Polling blockhash status...",
+            "[SYSTEM] Validating signature integrity..."
+          ],
+          static: [
+            "[SYSTEM] Analyzing instruction boundary conditions...",
+            "[SYSTEM] Verifying account ownership validation depth...",
+            "[SYSTEM] Heuristic check: Instruction count vs Reentrancy risk..."
+          ],
+          ai: [
+            "[REXY] Deep-tracing cross-program invocation paths...",
+            "[REXY] Simulating adversarial state transitions...",
+            "[REXY] Layer 2 Neural logic pass in progress...",
+            "[AI] Refining formal verification proofs..."
+          ],
+          blockchain: [
+            "[BLOCKCHAIN] Compacting proof for on-chain storage...",
+            "[BLOCKCHAIN] Verifying ledger finality..."
+          ]
+        };
+
+        const currentGenericLogs = genericLogsMap[stage as keyof typeof genericLogsMap] || [];
+        if (currentGenericLogs.length > 0) {
+          const randomLog = currentGenericLogs[Math.floor(Math.random() * currentGenericLogs.length)];
+          setLogs(prev => {
+            const next = [...prev, randomLog];
+            return next.slice(-50);
+          });
+          
+          if (stage === 'ai') {
+            setHighlightedLine(Math.floor(Math.random() * lines.length));
+          }
+        }
       }
-    }, 700);
+    }, 600);
 
     return () => clearInterval(logInterval);
   }, [stage, lines.length]);

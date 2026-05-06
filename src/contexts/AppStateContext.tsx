@@ -20,6 +20,10 @@ interface AppStateContextType {
   // Copilot View State
   copilotMessages: ChatMessage[];
   setCopilotMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+
+  // Network State
+  firebaseConnected: boolean;
+  setFirebaseConnected: (val: boolean) => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -36,12 +40,15 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     timestamp: Date.now()
   }]);
 
+  const [firebaseConnected, setFirebaseConnected] = useState(true);
+
   return (
     <AppStateContext.Provider value={{
       auditCode, setAuditCode,
       auditAddress, setAuditAddress,
       auditReport, setAuditReport,
-      copilotMessages, setCopilotMessages
+      copilotMessages, setCopilotMessages,
+      firebaseConnected, setFirebaseConnected
     }}>
       {children}
     </AppStateContext.Provider>

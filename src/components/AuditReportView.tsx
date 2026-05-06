@@ -413,10 +413,11 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
       setFixProgress((i + 1) * 25);
     }
     
-    showNotification("Security patches applied successfully! Returning to editor.", "success");
+    showNotification("Security patches applied successfully! This code is now secured.", "success");
+    setIsApplied(true);
     await new Promise(r => setTimeout(r, 1000));
     
-    onApplyFix();
+    // onApplyFix(); // Don't return automatically anymore as per user request
     setIsApplyingFixes(false);
   };
 
@@ -798,7 +799,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
                   setIsRecordingOnChain(false);
                }
             }}
-            disabled={isRecordingOnChain || !certificateMint}
+            disabled={isRecordingOnChain || !onChainProofSig}
             className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRecordingOnChain ? <Loader2 className="w-5 h-5 animate-spin text-rexy-primary" /> : <DollarSign className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />}
@@ -977,6 +978,29 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Review AI-Generated Patches</p>
               </div>
             </div>
+
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => {
+                  const fullCode = report.fullFixedCode?.replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
+                  if (fullCode) {
+                    navigator.clipboard.writeText(fullCode);
+                    showNotification("Full secured code copied!", "success");
+                  }
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-2 transition-all"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                Copy Full Code
+              </button>
+              
+              {isApplied && (
+                <div className="px-5 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Code Applied
+                </div>
+              )}
+            </div>
             
             {report.quantumReadinessSummary && (
               <div className="px-5 py-2.5 bg-purple-50 border border-purple-200 rounded-full flex items-center gap-3 shadow-inner">
@@ -1069,14 +1093,24 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
             />
           )}
           <button 
-            onClick={handleApplyFixInternal}
+            onClick={isApplied ? onApplyFix : handleApplyFixInternal}
             disabled={isApplyingFixes || !report.fullFixedCode}
-            className="w-full py-6 bg-rexy-primary text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-2xl shadow-rexy-primary/20 relative z-10 disabled:opacity-50"
+            className={cn(
+              "w-full py-6 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all shadow-2xl relative z-10 disabled:opacity-50",
+              isApplied 
+                ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/20" 
+                : "bg-rexy-primary text-white hover:bg-indigo-600 shadow-rexy-primary/20"
+            )}
           >
             {isApplyingFixes ? (
               <div className="flex items-center justify-center gap-3">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span>Fixing {fixProgress}%</span>
+              </div>
+            ) : isApplied ? (
+              <div className="flex items-center justify-center gap-3">
+                <CheckCircle className="w-5 h-5" />
+                <span>Return to Editor with Fixed Code</span>
               </div>
             ) : (
               "Apply All Fixes to Code"

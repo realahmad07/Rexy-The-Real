@@ -11,15 +11,17 @@ import OnboardingModal from './components/OnboardingModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useAppState } from './contexts/AppStateContext';
+import { cn } from './lib/utils';
 
 const App: React.FC = () => {
   const { connected, publicKey } = useWallet();
   const [isWalletLoggedIn, setIsWalletLoggedIn] = useState(false);
   const [isGuestLoggedIn, setIsGuestLoggedIn] = useState(false);
+  const { firebaseConnected, setFirebaseConnected } = useAppState();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [systemHealth, setSystemHealth] = useState<'online' | 'offline'>('online');
-  const [firebaseConnected, setFirebaseConnected] = useState(true);
 
   const isLoggedIn = isWalletLoggedIn || isGuestLoggedIn;
 
@@ -66,6 +68,10 @@ const App: React.FC = () => {
       
       // Save user profile to Firestore
       const saveUserProfile = async () => {
+        if (!firebaseConnected) {
+          console.warn("Database offline: skipping user profile sync.");
+          return;
+        }
         const uid = publicKey.toString();
         const userRef = doc(db, 'users', uid);
         try {
@@ -179,21 +185,56 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end">
-              <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full border border-rexy-border">
-                <div className={`w-2 h-2 rounded-full animate-pulse transition-colors ${systemHealth === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                <span className={`text-[8px] font-black uppercase tracking-widest ${systemHealth === 'online' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  API: {systemHealth === 'online' ? 'Online' : 'Offline'}
+            <div className="hidden lg:flex items-center gap-3">
+              <div className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-500",
+                systemHealth === 'online' 
+                  ? "bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_15px_-5px_rgba(16,185,129,0.3)]" 
+                  : "bg-rose-500/5 border-rose-500/20 shadow-[0_0_15px_-5px_rgba(244,63,94,0.3)]"
+              )}>
+                <div className="relative">
+                  <div className={cn(
+                    "w-2 h-2 rounded-full",
+                    systemHealth === 'online' ? "bg-emerald-500" : "bg-rose-500"
+                  )} />
+                  <div className={cn(
+                    "absolute inset-0 w-2 h-2 rounded-full animate-ping",
+                    systemHealth === 'online' ? "bg-emerald-500" : "bg-rose-500"
+                  )} />
+                </div>
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-[0.2em]",
+                  systemHealth === 'online' ? "text-emerald-500" : "text-rose-500"
+                )}>
+                  API: {systemHealth === 'online' ? 'Online' : 'Check Link'}
                 </span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 mt-1 bg-slate-50 rounded-full border border-rexy-border">
-                <div className={`w-1.5 h-1.5 rounded-full animate-pulse transition-colors ${firebaseConnected ? 'bg-indigo-500' : 'bg-amber-500'}`} />
-                <span className={`text-[7px] font-black uppercase tracking-widest ${firebaseConnected ? 'text-indigo-600' : 'text-amber-600'}`}>
-                  Network: {firebaseConnected ? 'Synced' : 'Offline Mode'}
+
+              <div className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-500",
+                firebaseConnected 
+                  ? "bg-rexy-primary/5 border-rexy-primary/20 shadow-[0_0_15px_-5px_rgba(99,102,241,0.3)]" 
+                  : "bg-amber-500/5 border-amber-500/20 shadow-[0_0_15px_-5px_rgba(245,158,11,0.3)]"
+              )}>
+                <div className="relative">
+                  <div className={cn(
+                    "w-2 h-2 rounded-full",
+                    firebaseConnected ? "bg-rexy-primary" : "bg-amber-500"
+                  )} />
+                  <div className={cn(
+                    "absolute inset-0 w-2 h-2 rounded-full animate-ping opacity-40",
+                    firebaseConnected ? "bg-rexy-primary" : "bg-amber-500"
+                  )} />
+                </div>
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-[0.2em]",
+                  firebaseConnected ? "text-rexy-primary" : "text-amber-500"
+                )}>
+                  Network: {firebaseConnected ? 'Synced' : 'Local Mode'}
                 </span>
               </div>
             </div>
-            <WalletMultiButton className="!bg-rexy-primary hover:!bg-indigo-500 !h-10 !px-6 !rounded-xl !text-xs !font-bold transition-all shadow-lg shadow-rexy-primary/20" />
+            <WalletMultiButton className="!bg-rexy-primary hover:!bg-indigo-500 !h-12 !px-8 !rounded-2xl !text-xs !font-black !transition-all !border-none shadow-xl shadow-rexy-primary/20 uppercase tracking-widest active:scale-95" />
           </div>
         </div>
       </nav>

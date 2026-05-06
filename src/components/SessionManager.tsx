@@ -3,6 +3,7 @@ import { db, auth } from '../firebase';
 import { doc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Clock, AlertTriangle, LogOut, ShieldCheck } from 'lucide-react';
+import { useAppState } from '../contexts/AppStateContext';
 
 interface SessionManagerProps {
   userId: string;
@@ -14,6 +15,7 @@ const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
 const WARNING_THRESHOLD = 2 * 60 * 1000; // 2 minutes warning
 
 export const SessionManager: React.FC<SessionManagerProps> = ({ userId, onLogout, children }) => {
+  const { firebaseConnected } = useAppState();
   const [lastActivity, setLastActivity] = useState(Date.now());
   const [showWarning, setShowWarning] = useState(false);
   const [sessionId] = useState(() => {
@@ -37,6 +39,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({ userId, onLogout
     if (!userId) return;
 
     const performHeartbeat = async () => {
+      if (!firebaseConnected) return;
       try {
         const userRef = doc(db, 'users', userId);
         await updateDoc(userRef, {
@@ -101,12 +104,16 @@ export const SessionManager: React.FC<SessionManagerProps> = ({ userId, onLogout
     if (!userId) return;
 
     const unsubscribe = onSnapshot(doc(db, 'users', userId), (snapshot) => {
+      if (!firebaseConnected) return;
       const data = snapshot.data();
       if (data && data.sessionId && data.sessionId !== sessionId) {
         // Another session has started elsewhere
         console.warn("Concurrent session detected. Logging out.");
         onLogout();
       }
+    }, (error) => {
+      console.error("Concurrent session check failed:", error);
+      // We don't logout on error to allow for temporary offline state
     });
 
     return () => unsubscribe();
