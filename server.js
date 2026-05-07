@@ -395,12 +395,24 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
 
     const hasValidKey = isValidGroqKey(groqKey) || isValidGeminiKey(geminiKey);
     
+    // Check if the user used placeholder strings from documentation
+    const isPlaceholder = (k) => k && (
+      k.includes("your-") || 
+      k.includes("(Your") || 
+      k.includes("<your") || 
+      k.toLowerCase().includes("placeholder")
+    );
+    
+    const groqPlaceholder = isPlaceholder(groqKey);
+    const geminiPlaceholder = isPlaceholder(geminiKey);
+    
     // Log for Vercel debugging (masked)
-    console.log(`[HealthCheck] Groq: ${groqKey ? (groqKey.substring(0, 8) + '...') : 'NULL'}, Gemini: ${geminiKey ? (geminiKey.substring(0, 8) + '...') : 'NULL'}`);
-    console.log(`[HealthCheck] Status: ${hasValidKey ? 'OK' : 'RESTRICTED'}`);
+    console.log(`[HealthCheck] Groq: ${groqKey ? (groqKey.substring(0, 8) + '...') : 'NULL'} (Valid: ${isValidGroqKey(groqKey)}, Placeholder: ${groqPlaceholder})`);
+    console.log(`[HealthCheck] Gemini: ${geminiKey ? (geminiKey.substring(0, 8) + '...') : 'NULL'} (Valid: ${isValidGeminiKey(geminiKey)}, Placeholder: ${geminiPlaceholder})`);
+    console.log(`[HealthCheck] Status: ${hasValidKey && !groqPlaceholder && !geminiPlaceholder ? 'OK' : 'RESTRICTED'}`);
 
     res.json({ 
-      status: hasValidKey ? "ok" : "restricted", 
+      status: (hasValidKey && !groqPlaceholder && !geminiPlaceholder) ? "ok" : "restricted", 
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
       debug: {
@@ -408,6 +420,8 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
         geminiConfigured: !!geminiKey,
         groqValid: isValidGroqKey(groqKey),
         geminiValid: isValidGeminiKey(geminiKey),
+        groqIsPlaceholder: groqPlaceholder,
+        geminiIsPlaceholder: geminiPlaceholder,
         nodeEnv: process.env.NODE_ENV
       },
       providers: {

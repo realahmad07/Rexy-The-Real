@@ -115,13 +115,10 @@ export const RPC_URL = isHeliusValid
  * Helper to get the cluster name for Solscan links based on the RPC URL.
  */
 export function getClusterParam(): string {
-  if (RPC_URL.includes("devnet")) return "?cluster=devnet";
-  if (RPC_URL.includes("testnet")) return "?cluster=testnet";
-  // Check if we are currently using devnet in the app context (even if RPC is mainnet, for demo/testing)
-  if (window.location.hostname.includes("dev") || window.location.hostname.includes("localhost")) {
-    // Optionally default to devnet for dev environments if needed, 
-    // but better to check the actual network connection if possible.
-  }
+  // Use the actual connection endpoint to determine the cluster
+  const endpoint = connection.rpcEndpoint;
+  if (endpoint.includes("devnet")) return "?cluster=devnet";
+  if (endpoint.includes("testnet")) return "?cluster=testnet";
   return "";
 }
 
