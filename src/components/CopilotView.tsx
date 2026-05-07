@@ -47,16 +47,20 @@ export default function CopilotView() {
         }
       } catch (err: any) {
         if (err.name === 'AbortError') {
-            console.error("Price fetch timed out");
+            console.warn("Price fetch timed out. Using cached or fallback data.");
         } else {
-            console.error("Price fetch failed:", err.message);
+            // Silence frequent fetch errors to prevent console spam
+            if (process.env.NODE_ENV === 'development') {
+              console.warn("Price fetch unavailable, using internal fallback.");
+            }
+            
             // Fallback mock prices if real API fails to keep UI alive
             setPrices({
-              "solana": { "usd": 145.20, "usd_24h_change": 2.5 },
-              "bonk": { "usd": 0.0000241, "usd_24h_change": -1.2 },
-              "jupiter-exchange-solana": { "usd": 1.12, "usd_24h_change": 0.5 },
-              "raydium": { "usd": 1.45, "usd_24h_change": 4.2 },
-              "jito-governance-token": { "usd": 2.85, "usd_24h_change": -0.8 }
+              "solana": { "usd": 156.42, "usd_24h_change": 1.25 },
+              "bonk": { "usd": 0.0000258, "usd_24h_change": -0.42 },
+              "jupiter-exchange-solana": { "usd": 1.08, "usd_24h_change": 2.15 },
+              "raydium": { "usd": 1.62, "usd_24h_change": 5.10 },
+              "jito-governance-token": { "usd": 3.12, "usd_24h_change": -1.20 }
             });
         }
       } finally {
@@ -68,12 +72,24 @@ export default function CopilotView() {
     return () => clearInterval(interval);
   }, []);
 
+
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+
   // Scroll to bottom on new message
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+    
+    // Check if last message was offline
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.role === 'model' && lastMsg.content.includes('[OFFLINE MODE]')) {
+      setIsOfflineMode(true);
+    } else if (lastMsg && lastMsg.role === 'model') {
+      setIsOfflineMode(false);
+    }
   }, [messages]);
+
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -193,10 +209,25 @@ export default function CopilotView() {
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Web3 Security Operations</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Online</span>
+
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-1 rounded-full border transition-all duration-500",
+            isOfflineMode 
+              ? "bg-amber-500/10 border-amber-500/20" 
+              : "bg-emerald-500/10 border-emerald-500/20"
+          )}>
+            <div className={cn(
+              "w-1.5 h-1.5 rounded-full animate-pulse",
+              isOfflineMode ? "bg-amber-500" : "bg-emerald-500"
+            )} />
+            <span className={cn(
+              "text-[9px] font-black uppercase tracking-widest",
+              isOfflineMode ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+            )}>
+              {isOfflineMode ? 'Offline Knowledge' : 'Cloud Sync Active'}
+            </span>
           </div>
+
         </div>
 
         {/* Message View */}

@@ -1,6 +1,7 @@
 import { AuditReport } from "../types";
 import { analyzeWithVulnLibrary } from "../lib/solanaVulnerabilities";
 import { Buffer } from "buffer";
+import { findOfflineResponse } from "../lib/offlineKnowledge";
 
 export async function performAudit(contractCode: string, isQuantumAttack: boolean = false): Promise<AuditReport | null> {
   const staticAnalysis = analyzeWithVulnLibrary(contractCode);
@@ -31,7 +32,17 @@ export async function performAudit(contractCode: string, isQuantumAttack: boolea
   }
 }
 
+
+// Local Cache for AI responses
+const chatCache: Record<string, string> = {};
+
 export async function chatWithRexy(message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[] = []): Promise<string> {
+  // Check cache first for exact message
+  if (chatCache[message]) {
+    console.log("Serving response from local cache...");
+    return chatCache[message];
+  }
+
   try {
     const response = await fetch("/api/ai/chat", {
       method: "POST",
@@ -45,10 +56,23 @@ export async function chatWithRexy(message: string, history: { role: 'user' | 'm
     }
 
     const data = await response.json();
-    return data.text || "I was unable to formulate a response.";
+    const aiResponse = data.text || "I was unable to formulate a response.";
+    
+    // Save to cache on success
+    chatCache[message] = aiResponse;
+    
+    return aiResponse;
   } catch (error) {
-    console.error("Rexy Chat Error:", error);
-    throw error;
+    console.warn("Primary AI engine failed, checking fallback:", error);
+    
+    try {
+      const fallbackResponse = findOfflineResponse(message);
+      return `[OFFLINE MODE] ${fallbackResponse}`;
+    } catch (fallbackError) {
+      console.error("Critical: Fallback engine failed too.", fallbackError);
+      throw error; 
+    }
   }
 }
+
 
