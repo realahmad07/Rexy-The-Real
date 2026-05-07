@@ -8,11 +8,12 @@ import AuditView from './components/AuditView';
 import CopilotView from './components/CopilotView';
 import InfoView from './components/InfoView';
 import OnboardingModal from './components/OnboardingModal';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppState } from './contexts/AppStateContext';
 import { cn } from './lib/utils';
+import { ShieldCheck, Database, Globe, Network } from 'lucide-react';
 
 const App: React.FC = () => {
   const { connected, publicKey } = useWallet();
@@ -186,59 +187,53 @@ const App: React.FC = () => {
 
 
           <div className="flex items-center gap-4">
-            <div className="hidden lg:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-3">
               {/* System Health Badge */}
               <div className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300",
+                "flex items-center gap-2.5 px-4 py-2 rounded-2xl border transition-all duration-300 shadow-sm",
                 systemHealth === 'online' 
-                  ? "bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_15px_-5px_rgba(16,185,129,0.3)]" 
-                  : "bg-rose-500/5 border-rose-500/20 shadow-[0_0_15px_-5px_rgba(244,63,94,0.3)]"
+                  ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500" 
+                  : "bg-rose-500/5 border-rose-500/20 text-rose-500"
               )}>
                 <div className="relative flex items-center justify-center">
                   <div className={cn(
-                    "w-2 h-2 rounded-full",
+                    "w-2.5 h-2.5 rounded-full border-2 border-white/20",
                     systemHealth === 'online' ? "bg-emerald-500" : "bg-rose-500"
                   )} />
                   {systemHealth === 'online' && (
-                    <div className="absolute inset-0 w-2 h-2 rounded-full animate-ping bg-emerald-500/50" />
+                    <div className="absolute inset-0 w-2.5 h-2.5 rounded-full animate-ping bg-emerald-500/40" />
                   )}
                 </div>
-                <span className={cn(
-                  "text-[9px] font-black uppercase tracking-[0.2em]",
-                  systemHealth === 'online' ? "text-emerald-500" : "text-rose-500"
-                )}>
-                  Core: {systemHealth === 'online' ? 'Online' : 'Restricted'}
-                </span>
+                <div className="flex flex-col -space-y-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-[0.1em]">AI Engine</span>
+                  <span className="text-[8px] font-bold opacity-70 uppercase tracking-widest leading-none">
+                    {systemHealth === 'online' ? 'Connected' : 'Offline Mode'}
+                  </span>
+                </div>
               </div>
 
               {/* Network / Firebase Badge */}
               <div className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300",
+                "flex items-center gap-2.5 px-4 py-2 rounded-2xl border transition-all duration-300 shadow-sm",
                 firebaseConnected 
-                  ? "bg-rexy-primary/5 border-rexy-primary/20 shadow-[0_0_15px_-5px_rgba(99,102,241,0.3)]" 
-                  : "bg-amber-500/5 border-amber-500/20 shadow-[0_0_15px_-5px_rgba(245,158,11,0.3)]"
+                  ? "bg-rexy-primary/5 border-rexy-primary/20 text-rexy-primary" 
+                  : "bg-amber-500/5 border-amber-500/20 text-amber-500"
               )}>
-                <div className="relative flex items-center justify-center">
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    firebaseConnected ? "bg-rexy-primary" : "bg-amber-500"
-                  )} />
-                  {firebaseConnected && (
-                    <div className="absolute inset-0 w-2 h-2 rounded-full animate-ping bg-rexy-primary/50" />
-                  )}
+                <div className="relative flex items-center justify-center text-current">
+                   {firebaseConnected ? <Globe className="w-3.5 h-3.5" /> : <Network className="w-3.5 h-3.5" />}
                 </div>
-                <span className={cn(
-                  "text-[9px] font-black uppercase tracking-[0.2em]",
-                  firebaseConnected ? "text-rexy-primary" : "text-amber-500"
-                )}>
-                  Network: {firebaseConnected ? 'Synced' : 'Local Node'}
-                </span>
+                <div className="flex flex-col -space-y-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-[0.1em]">Network</span>
+                  <span className="text-[8px] font-bold opacity-70 uppercase tracking-widest leading-none">
+                    {firebaseConnected ? 'Synced' : 'Local Node'}
+                  </span>
+                </div>
               </div>
             </div>
             
-            <div className="h-8 w-[1px] bg-rexy-border hidden lg:block mx-2" />
+            <div className="h-10 w-[1px] bg-rexy-border/50 hidden lg:block mx-1" />
             
-            <WalletMultiButton className="!bg-rexy-primary hover:!bg-indigo-500 !h-12 !px-8 !rounded-2xl !text-xs !font-black !transition-all !border-none shadow-xl shadow-rexy-primary/20 uppercase tracking-widest active:scale-95" />
+            <WalletMultiButton className="!bg-rexy-primary hover:!bg-indigo-500 !h-12 !px-8 !rounded-2xl !text-[10px] !font-black !transition-all !border-none shadow-xl shadow-rexy-primary/20 uppercase tracking-widest active:scale-95" />
           </div>
 
         </div>

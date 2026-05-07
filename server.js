@@ -384,8 +384,10 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
     const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_");
     const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
 
+    const hasValidKey = isValidGroqKey(groqKey) || isValidGeminiKey(geminiKey);
+
     res.json({ 
-      status: "ok", 
+      status: hasValidKey ? "ok" : "restricted", 
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
       providers: {
