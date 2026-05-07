@@ -126,11 +126,21 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    if (connected) {
-      await disconnect();
+    try {
+      console.log("[Auth] Initiating logout process...");
+      if (connected) {
+        await disconnect().catch(err => {
+          console.warn("[Auth] Wallet disconnect failed, proceeding with state reset:", err);
+        });
+      }
+    } catch (err) {
+      console.warn("[Auth] Logout error:", err);
+    } finally {
+      setIsWalletLoggedIn(false);
+      setIsGuestLoggedIn(false);
+      // Ensure session persistence is handled if any
+      localStorage.removeItem('rexy_session_active'); 
     }
-    setIsWalletLoggedIn(false);
-    setIsGuestLoggedIn(false);
   };
 
   if (!isLoggedIn) {
@@ -197,6 +207,23 @@ const App: React.FC = () => {
 
 
           <div className="flex items-center gap-4">
+            {/* User Profile Badge */}
+            {isWalletLoggedIn && (
+              <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-slate-900 rounded-full border border-white/10 shadow-2xl">
+                <div className="w-6 h-6 rounded-lg bg-rexy-primary/20 flex items-center justify-center text-rexy-primary font-black text-[10px]">
+                  {publicKey?.toString().slice(0, 1).toUpperCase()}
+                </div>
+                <div className="flex flex-col -space-y-0.5">
+                  <span className="text-[9px] font-black text-white uppercase tracking-wider leading-none">
+                    {publicKey?.toString() === "247280@students.au.edu.pk" || isWalletLoggedIn ? "Verified Auditor" : "Analyst"}
+                  </span>
+                  <span className="text-[7px] font-mono text-slate-500 uppercase tracking-tighter">
+                    {publicKey?.toString().slice(0, 4)}...{publicKey?.toString().slice(-4)}
+                  </span>
+                </div>
+              </div>
+            )}
+            
             <div className="hidden lg:flex items-center gap-3">
               {/* System Health Badge */}
               <div className={cn(

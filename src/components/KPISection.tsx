@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Activity, ShieldCheck, Zap, Globe } from 'lucide-react';
 
+import { cn } from '../lib/utils';
+
 import { AuditReport } from '../types';
 
 interface KPISectionProps {
@@ -24,19 +26,26 @@ export const KPISection: React.FC<KPISectionProps> = ({ report }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.1 }}
-          className="bg-rexy-card border border-rexy-border rounded-2xl p-5 shadow-xl hover:shadow-rexy-primary/5 transition-all group"
+          className="bg-rexy-card border border-rexy-border rounded-2xl p-5 shadow-xl hover:shadow-rexy-primary/5 transition-all group overflow-hidden relative"
         >
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-2 bg-rexy-primary/10 rounded-lg group-hover:scale-110 transition-transform">
-              <kpi.icon className="w-5 h-5 text-rexy-primary" />
+          {/* Subtle gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-rexy-primary/0 to-rexy-primary/0 group-hover:from-rexy-primary/[0.02] transition-all duration-500" />
+          
+          <div className="flex justify-between items-start mb-4 relative z-10">
+            <div className="p-2 bg-rexy-primary/10 rounded-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 relative">
+              <kpi.icon className="w-5 h-5 text-rexy-primary relative z-10" />
+              <div className="absolute inset-0 bg-rexy-primary/20 rounded-xl animate-pulse blur-sm" />
             </div>
-            <span className={i === 3 ? "text-[10px] font-bold text-rexy-primary bg-rexy-primary/10 px-2 py-0.5 rounded-full" : "text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full"}>
+            <span className={cn(
+              "text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full border shadow-sm",
+              i === 3 ? "text-rexy-primary bg-rexy-primary/5 border-rexy-primary/10" : "text-emerald-500 bg-emerald-500/5 border-emerald-500/10"
+            )}>
               {kpi.delta}
             </span>
           </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{kpi.label}</p>
-            <p className="text-2xl font-black text-slate-900 tracking-tighter">{kpi.value}</p>
+          <div className="relative z-10">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 opacity-70">{kpi.label}</p>
+            <p className="text-2xl font-black text-slate-900 tracking-tighter group-hover:translate-x-1 transition-transform duration-300">{kpi.value}</p>
           </div>
         </motion.div>
       ))}

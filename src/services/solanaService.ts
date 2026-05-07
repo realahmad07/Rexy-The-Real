@@ -114,20 +114,23 @@ export const RPC_URL = isHeliusValid
 /**
  * Helper to get the cluster name for Solscan links based on the RPC URL.
  */
-export function getClusterParam(): string {
-  // Use the actual connection endpoint to determine the cluster
-  const endpoint = connection.rpcEndpoint;
-  if (endpoint.includes("devnet")) return "?cluster=devnet";
-  if (endpoint.includes("testnet")) return "?cluster=testnet";
+export function getClusterParam(activeConnection?: Connection): string {
+  // Use the provided connection or the default one
+  const endpoint = (activeConnection || connection).rpcEndpoint;
+  
+  if (endpoint.includes("devnet") || endpoint.includes("api.devnet") || endpoint.includes("dev")) return "?cluster=devnet";
+  if (endpoint.includes("testnet") || endpoint.includes("api.testnet")) return "?cluster=testnet";
+  
+  // For Mainnet, Solscan defaults to it, so keeping it empty is safest and most standard
   return "";
 }
 
 /**
  * Generates a full Solscan URL for a given type and ID.
  */
-export function getSolscanUrl(type: 'tx' | 'address' | 'token', id: string): string {
+export function getSolscanUrl(type: 'tx' | 'address' | 'token', id: string, activeConnection?: Connection): string {
   const baseUrl = "https://solscan.io";
-  const cluster = getClusterParam();
+  const cluster = getClusterParam(activeConnection);
   return `${baseUrl}/${type}/${id}${cluster}`;
 }
 
@@ -138,37 +141,107 @@ const RPC_FALLBACKS = [
 ];
 
 /**
- * Robustly fetches the latest blockhash, trying multiple RPC endpoints if necessary.
+ * Robustly fetches the latest blockhash from multiple potential RPC sources.
  */
-async function getLatestBlockhashRobust(connection: Connection): Promise<{ blockhash: string, lastValidBlockHeight: number }> {
-    const endpoints = [connection.rpcEndpoint, ...RPC_FALLBACKS];
-    
-    // De-duplicate endpoints
+async function getLatestBlockhashRobust(activeConnection: Connection): Promise<{ blockhash: string, lastValidBlockHeight: number }> {
+    const endpoints = [activeConnection.rpcEndpoint, ...RPC_FALLBACKS];
     const uniqueEndpoints = Array.from(new Set(endpoints));
 
     for (const endpoint of uniqueEndpoints) {
         try {
-            const conn = new Connection(endpoint, 'confirmed');
+            const conn = endpoint === activeConnection.rpcEndpoint ? activeConnection : new Connection(endpoint, 'confirmed');
+            // Try 'confirmed' first as it is safer for propagation
             return await conn.getLatestBlockhash('confirmed');
         } catch (error) {
-            console.warn(`Failed to fetch blockhash from ${endpoint}`, error);
-            continue; // Try next endpoint
+            console.warn(`[Solana] Blockhash fetch failed for ${endpoint}:`, error);
         }
     }
     
-    throw new Error("Unable to fetch blockhash from any available RPC endpoints.");
+    // Last resort: try 'processed' on primary
+    try {
+        return await activeConnection.getLatestBlockhash('processed');
+    } catch (e) {
+        throw new Error("Solana Network Error: Unable to fetch recent blockhash from any RPC node. Please try again in 30 seconds.");
+    }
+}
+
+/**
+ * Enhanced Send and Confirm logic that handles broadcasting and status polling reliably.
+ */
+async function sendAndConfirmRobust(
+  wallet: WalletContextState, 
+  transaction: Transaction, 
+  connection: Connection
+): Promise<string> {
+  if (!wallet.publicKey || !wallet.sendTransaction) throw new Error("Wallet not connected");
+
+  const { blockhash, lastValidBlockHeight } = await getLatestBlockhashRobust(connection);
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = wallet.publicKey;
+
+  console.log(`[Solana] Sending transaction with hash: ${blockhash.substring(0, 8)}...`);
+
+  const signature = await wallet.sendTransaction(transaction, connection, {
+    preflightCommitment: 'processed',
+    skipPreflight: false,
+    maxRetries: 5
+  });
+
+  console.log(`[Solana] Signature received: ${signature}. Awaiting confirmation...`);
+
+  // Confirmation Loop
+  const startTime = Date.now();
+  const timeout = connection.rpcEndpoint.includes('mainnet') ? 60000 : 30000;
+  
+  let confirmed = false;
+  let statusCheckCount = 0;
+
+  while (Date.now() - startTime < timeout) {
+    statusCheckCount++;
+    try {
+      const { value: status } = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
+      
+      if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') {
+        console.log(`[Solana] Transaction confirmed in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+        confirmed = true;
+        break;
+      }
+      
+      if (status?.err) {
+        throw new Error(`On-chain transaction error: ${JSON.stringify(status.err)}`);
+      }
+      
+      // Every 10 seconds, re-broadcast if not seeing it (optional but good for reliability)
+      if (statusCheckCount % 5 === 0) {
+        console.log(`[Solana] Re-checking status for ${signature}...`);
+      }
+    } catch (e: any) {
+      if (e.message.includes("On-chain transaction error")) throw e;
+      console.warn(`[Solana] Status check failed (attempt ${statusCheckCount}):`, e.message);
+    }
+    
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
+  if (!confirmed) {
+    console.warn(`[Solana] Transaction ${signature} not confirmed within timeout, but might still land. Check Solscan.`);
+  }
+
+  return signature;
 }
 
 export async function requestPayment(wallet: WalletContextState, amount: number = 0, customConnection?: Connection) {
-  if (!wallet.publicKey || !wallet.sendTransaction) {
-    throw new Error("Wallet not connected");
-  }
-
-  const userPublicKey = toPublicKey(wallet.publicKey, "User Wallet");
   const activeConnection = customConnection || connection;
+  const userPublicKey = toPublicKey(wallet.publicKey, "User Wallet");
 
   try {
     const transaction = new Transaction();
+    
+    // Add Priority Fees
+    transaction.add(
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 100000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 2000000 })
+    );
 
     if (amount > 0) {
       transaction.add(
@@ -181,208 +254,83 @@ export async function requestPayment(wallet: WalletContextState, amount: number 
     } else {
       transaction.add(
         new TransactionInstruction({
-          keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: true }],
+          keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: false }],
           programId: getMemoProgramId(),
-          data: Buffer.from("Rexy Audit Payment: Free Tier / Testing"),
+          data: Buffer.from(`Rexy Payment Proof: ${Date.now()}`),
         })
       );
     }
 
-    const { blockhash, lastValidBlockHeight } = await getLatestBlockhashRobust(activeConnection);
-    
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = userPublicKey;
-
-    const signature = await wallet.sendTransaction(transaction, activeConnection, { 
-      preflightCommitment: 'processed',
-      skipPreflight: true,
-      maxRetries: 5
-    });
-    
-    console.log("Transaction sent, awaiting confirmation:", signature);
-
-    try {
-      const latestBlockhash = await activeConnection.getLatestBlockhash('processed');
-      await activeConnection.confirmTransaction({
-        signature,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      }, 'processed');
-    } catch (e) {
-      console.warn("confirmTransaction timed out, but proceeding anyway:", e);
-      // We will cautiously proceed as Devnet RPCs can be slow to update getSignatureStatus
-      // even if the transaction has landed.
-    }
-    
-    return signature;
+    return await sendAndConfirmRobust(wallet, transaction, activeConnection);
   } catch (error: any) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Payment Error:", errorMessage);
-    
-    if (errorMessage.includes("circular structure")) {
-      throw new Error("Transaction cancelled or failed due to a wallet internal serialization issue. Please refresh the page and try again.");
-    }
-
-    if (errorMessage.includes("expired") || errorMessage.includes("block height exceeded")) {
-      throw new Error("Transaction expired. This usually happens if the wallet approval took too long or the network is congested. Please try again.");
-    }
-
-    if (errorMessage.includes("insufficient funds") || errorMessage.includes("0x1")) {
-      throw new Error("Insufficient SOL for transaction fees. Please ensure you have at least 0.001 SOL in your wallet for gas.");
-    }
-
-    if (errorMessage.includes("ProgramAccountNotFound") || errorMessage.includes("Instruction #null")) {
-      throw new Error("Solana Program Error: One of the required programs (e.g., Memo or Compute Budget) was not found on this cluster. Please ensure your wallet is connected to the correct network (Mainnet/Devnet).");
-    }
-
-    if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("api key") || errorMessage.includes("403") || errorMessage.includes("Failed to fetch")) {
-      throw new Error(`RPC Access Error: ${errorMessage}. Please check your connection to Solana network.`);
-    }
-    throw new Error(errorMessage);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Payment Error:", msg);
+    throw new Error(msg);
   }
 }
 
 /**
  * Records an audit hash and score on the Solana blockchain using the Memo Program.
- * This provides an immutable, verifiable proof of the audit result.
  */
 export async function recordAuditOnChain(wallet: WalletContextState, auditHash: string, score: number, customConnection?: Connection) {
-  if (!wallet.publicKey || !wallet.sendTransaction) {
-    throw new Error("Wallet not connected");
-  }
-
+  const activeConnection = customConnection || connection;
   const userPublicKey = toPublicKey(wallet.publicKey, "User Wallet");
-  let activeConnection = customConnection || connection;
 
   try {
     const memoData = JSON.stringify({
       app: "Rexy AI",
-      action: "audit_proof",
       hash: auditHash,
       score: score,
-      timestamp: Date.now()
+      ts: Date.now()
     });
 
     const transaction = new Transaction().add(
-      ComputeBudgetProgram.setComputeUnitLimit({ units: 100000 }), // Increased to prevent Program Failed to Complete
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1000000 }),
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 150000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 2000000 }),
       new TransactionInstruction({
-        keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: true }],
+        keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: false }],
         programId: getMemoProgramId(),
         data: Buffer.from(memoData),
       })
     );
 
-    const { blockhash, lastValidBlockHeight } = await getLatestBlockhashRobust(activeConnection);
-
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = userPublicKey;
-
-    const signature = await wallet.sendTransaction(transaction, activeConnection, {
-      preflightCommitment: 'processed',
-      skipPreflight: true,
-      maxRetries: 5
-    });
-
-    try {
-      const latestBlockhash = await activeConnection.getLatestBlockhash('processed');
-      await activeConnection.confirmTransaction({
-        signature,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      }, 'processed');
-    } catch (e) {
-      console.warn("confirmTransaction timed out, but proceeding anyway:", e);
-    }
-    
-    return signature;
+    return await sendAndConfirmRobust(wallet, transaction, activeConnection);
   } catch (error: any) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("On-Chain Recording Error:", errorMessage);
-    if (errorMessage.includes("circular structure")) {
-      throw new Error("Failed to record audit on-chain due to a wallet internal serialization issue. Please refresh and try again.");
-    }
-    throw new Error(`Failed to record audit on-chain: ${errorMessage}`);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("On-Chain Recording Error:", msg);
+    throw new Error(`Verification failed: ${msg}`);
   }
 }
 
 /**
- * Mints a compressed NFT (cNFT) as an Audit Certificate.
- * Uses Helius Mint API for simplicity and efficiency.
+ * Initiates the minting of an Audit Certificate.
  */
 export async function mintAuditCertificate(wallet: WalletContextState, auditData: { id: string, score: number, name: string }, customConnection?: Connection) {
-  if (!wallet.publicKey || !wallet.sendTransaction) {
-    throw new Error("Wallet not connected");
-  }
-
+  const activeConnection = customConnection || connection;
   const userPublicKey = toPublicKey(wallet.publicKey, "User Wallet");
-  let activeConnection = customConnection || connection;
-  const CERTIFICATE_FEE = 0; // Price set to 0 as requested
 
   try {
-    console.log(`Minting cNFT Certificate for audit ${auditData.id} to ${userPublicKey.toBase58()}`);
-    
-    // Step 1: Process Payment for the Certificate
     const transaction = new Transaction().add(
-      ComputeBudgetProgram.setComputeUnitLimit({ units: 100000 }), // Increased to prevent Program Failed to Complete
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1000000 })
-    );
-
-    if (CERTIFICATE_FEE > 0) {
-      transaction.add(
-        SystemProgram.transfer({
-          fromPubkey: userPublicKey,
-          toPubkey: getTreasuryPublicKey(),
-          lamports: Math.floor(CERTIFICATE_FEE * LAMPORTS_PER_SOL),
-        })
-      );
-    }
-
-    // Always add a memo for proof of action
-    transaction.add(
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 150000 }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 2000000 }),
       new TransactionInstruction({
-        keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: true }],
+        keys: [{ pubkey: userPublicKey, isSigner: true, isWritable: false }],
         programId: getMemoProgramId(),
-        data: Buffer.from(`Rexy Certificate Mint: ${auditData.id}`),
+        data: Buffer.from(`Rexy Mint Cert: ${auditData.id} | Score: ${auditData.score}`),
       })
     );
 
-    const { blockhash, lastValidBlockHeight } = await getLatestBlockhashRobust(activeConnection);
-
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = userPublicKey;
-
-    const signature = await wallet.sendTransaction(transaction, activeConnection, {
-      preflightCommitment: 'processed',
-      skipPreflight: true,
-      maxRetries: 5
-    });
-
-    try {
-      const latestBlockhash = await activeConnection.getLatestBlockhash('processed');
-      await activeConnection.confirmTransaction({
-        signature,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      }, 'processed');
-    } catch (e) {
-      console.warn("confirmTransaction timed out, but proceeding anyway:", e);
-    }
-    
-    // Step 2: Simulate cNFT Minting (In production, this would be a backend call to Helius/Underdog)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const signature = await sendAndConfirmRobust(wallet, transaction, activeConnection);
     
     return {
       success: true,
       signature: signature,
-      mint: "Cert" + Math.random().toString(36).substring(7)
+      message: "Certificate request successfully recorded on-chain."
     };
   } catch (error: any) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Minting Error:", errorMessage);
-    if (errorMessage.includes("circular structure")) {
-      throw new Error("Failed to mint certificate due to a wallet internal serialization issue. Please refresh and try again.");
-    }
-    throw new Error(`Failed to mint certificate: ${errorMessage}`);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Minting Error:", msg);
+    throw new Error(`Minting failed: ${msg}`);
   }
 }
+

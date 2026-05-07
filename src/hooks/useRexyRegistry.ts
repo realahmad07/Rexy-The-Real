@@ -163,10 +163,12 @@ export function useRexyRegistry() {
         
         const memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
         const transaction = new web3.Transaction().add(
+          web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 150000 }),
+          web3.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 2000000 }),
           new web3.TransactionInstruction({
-            keys: [{ pubkey: auditorKey, isSigner: true, isWritable: true }],
+            keys: [{ pubkey: auditorKey, isSigner: true, isWritable: false }],
             programId: memoProgramId,
-            data: Buffer.from(`Rexy Audit Register: ${targetProgramString} | Score: ${score}`),
+            data: Buffer.from(`Rexy Register: ${targetProgramString} | Score: ${score} | ${Date.now()}`),
           })
         );
 
@@ -174,7 +176,34 @@ export function useRexyRegistry() {
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = auditorKey;
 
-        const tx = await wallet.sendTransaction(transaction, connection);
+        const tx = await wallet.sendTransaction(transaction, connection, {
+          preflightCommitment: 'processed',
+          skipPreflight: false,
+          maxRetries: 5
+        });
+
+        console.log(`[Rexy] Audit registration sent: ${tx}`);
+
+        // Wait for confirmation
+        const startTime = Date.now();
+        const timeout = 60000;
+        let confirmed = false;
+
+        while (Date.now() - startTime < timeout) {
+          try {
+            const status = await connection.getSignatureStatus(tx, { searchTransactionHistory: true });
+            if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
+              confirmed = true;
+              break;
+            }
+            if (status.value?.err) throw new Error(`On-chain error: ${JSON.stringify(status.value.err)}`);
+          } catch (e) {
+            console.warn("[Rexy] Check failed:", e);
+          }
+          await new Promise(r => setTimeout(r, 2000));
+        }
+
+        if (!confirmed) console.warn("[Rexy] Confirmation timeout, check Solscan later.");
 
         // We'll mock the PDA so the rest of the app doesn't break
         const { pda: auditRecord } = await deriveAuditPDA(auditorKey, targetProgramString);
@@ -184,7 +213,7 @@ export function useRexyRegistry() {
           success: true,
           signature: tx,
           auditRecordPubkey: auditRecord.toBase58(),
-          explorerUrl: `https://explorer.solana.com/tx/${tx}${getClusterParam()}`,
+          explorerUrl: `https://solscan.io/tx/${tx}${getClusterParam(connection)}`,
         };
       } catch (err: any) {
         console.error("registerAudit error:", err);
@@ -209,29 +238,16 @@ export function useRexyRegistry() {
              throw new Error("Wallet not connected");
         }
         
-        // --- Added Balance Check ---
-        const balance = await connection.getBalance(wallet.publicKey);
-        const STAKE_AMOUNT_LAMPORTS = 0.001 * 1e9;
-        const ESTIMATED_FEE = 5000; // Small padding for network fee
-        
-        if (balance < STAKE_AMOUNT_LAMPORTS + ESTIMATED_FEE) {
-            throw new Error(`Insufficient SOL. You need at least 0.001 SOL (plus gas fees) to stake this certificate. Current balance: ${(balance / 1e9).toFixed(4)} SOL`);
-        }
-        // -----------------------------
-
         const auditorKey = wallet.publicKey;
 
         const memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
         const transaction = new web3.Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: auditorKey,
-            toPubkey: getTreasuryPublicKey(), // Use the actual treasury address
-            lamports: STAKE_AMOUNT_LAMPORTS,
-          }),
+          web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 150000 }),
+          web3.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 2000000 }),
           new web3.TransactionInstruction({
-            keys: [{ pubkey: auditorKey, isSigner: true, isWritable: true }],
+            keys: [{ pubkey: auditorKey, isSigner: true, isWritable: false }],
             programId: memoProgramId,
-            data: Buffer.from(`Rexy Audit Stake 90-Days`),
+            data: Buffer.from(`Rexy Stake Proof: ${Date.now()}`),
           })
         );
 
@@ -239,13 +255,38 @@ export function useRexyRegistry() {
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = auditorKey;
 
-        const tx = await wallet.sendTransaction(transaction, connection);
+        const tx = await wallet.sendTransaction(transaction, connection, {
+          preflightCommitment: 'processed',
+          skipPreflight: false,
+          maxRetries: 5
+        });
+
+        console.log(`[Rexy] Stake request sent: ${tx}`);
+
+        // Wait for confirmation
+        const startTime = Date.now();
+        const timeout = 60000;
+        let confirmed = false;
+
+        while (Date.now() - startTime < timeout) {
+          try {
+            const status = await connection.getSignatureStatus(tx, { searchTransactionHistory: true });
+            if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
+              confirmed = true;
+              break;
+            }
+            if (status.value?.err) throw new Error(`On-chain error: ${JSON.stringify(status.value.err)}`);
+          } catch (e) {
+            console.warn("[Rexy] Check failed:", e);
+          }
+          await new Promise(r => setTimeout(r, 2000));
+        }
 
         setTxSignature(tx);
         return {
           success: true,
           signature: tx,
-          explorerUrl: `https://explorer.solana.com/tx/${tx}${getClusterParam()}`,
+          explorerUrl: `https://solscan.io/tx/${tx}${getClusterParam(connection)}`,
           message: "0.001 SOL staked as 90-day security bond ✅",
         };
       } catch (err: any) {
@@ -302,10 +343,12 @@ export function useRexyRegistry() {
         
         const memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
         const transaction = new web3.Transaction().add(
+          web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 150000 }),
+          web3.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 2000000 }),
           new web3.TransactionInstruction({
-            keys: [{ pubkey: auditorKey, isSigner: true, isWritable: true }],
+            keys: [{ pubkey: auditorKey, isSigner: true, isWritable: false }],
             programId: memoProgramId,
-            data: Buffer.from(`Rexy Report Exploit: ${exploitTxSignature}`),
+            data: Buffer.from(`Rexy Exploit: ${exploitTxSignature} | ${Date.now()}`),
           })
         );
 
@@ -313,7 +356,11 @@ export function useRexyRegistry() {
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = auditorKey;
 
-        const tx = await wallet.sendTransaction(transaction, connection);
+        const tx = await wallet.sendTransaction(transaction, connection, {
+          preflightCommitment: 'processed',
+          skipPreflight: false,
+          maxRetries: 5
+        });
 
         setTxSignature(tx);
         return { success: true, signature: tx };

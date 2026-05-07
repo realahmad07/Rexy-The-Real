@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { performAudit } from '../services/aiService';
+import { cn } from '../lib/utils';
 import { Loader2, ShieldAlert, AlertCircle, Code2, Wallet, ExternalLink } from 'lucide-react';
 import { AuditReport } from '../types';
 import { AuditReportView } from './AuditReportView';
@@ -28,6 +29,16 @@ const AuditView: React.FC = () => {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isQuantumAudit, setIsQuantumAudit] = useState(false);
+  const [toggleGlitch, setToggleGlitch] = useState(false);
+
+  const handleQuantumToggle = () => {
+    const newValue = !isQuantumAudit;
+    setIsQuantumAudit(newValue);
+    if (newValue) {
+      setToggleGlitch(true);
+      setTimeout(() => setToggleGlitch(false), 800);
+    }
+  };
 
   const handleFetchCode = async () => {
     if (!address.trim()) return;
@@ -66,10 +77,10 @@ const AuditView: React.FC = () => {
     try {
       let signature = "";
       
-      // Step 1: Request Payment (Minimal fee for Mainnet testing)
-      console.log("Requesting audit payment (0.00001 SOL)...");
-      signature = await requestPayment(wallet, 0.00001, connection);
-      console.log("Payment successful:", signature);
+      // Step 1: Request Payment (Zero fee, Memo proof only)
+      console.log("Requesting audit verification...");
+      signature = await requestPayment(wallet, 0, connection);
+      console.log("Verification successful:", signature);
       
       setPaymentProcessing(false);
       setLoading(true);
@@ -146,7 +157,15 @@ const AuditView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className={cn(
+      "space-y-8 transition-all duration-300",
+      toggleGlitch && "animate-pulse scale-[1.01] brightness-125"
+    )}>
+      {toggleGlitch && (
+        <div className="fixed inset-0 z-[100] pointer-events-none bg-rexy-primary/5 backdrop-blur-[1px] animate-in fade-in zoom-in duration-300">
+           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+        </div>
+      )}
       {!report ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-250px)]">
           <div className="flex flex-col space-y-4">
@@ -181,7 +200,7 @@ const AuditView: React.FC = () => {
                         type="checkbox" 
                         className="sr-only peer" 
                         checked={isQuantumAudit}
-                        onChange={() => setIsQuantumAudit(!isQuantumAudit)}
+                        onChange={handleQuantumToggle}
                       />
                       <div className="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-rexy-primary"></div>
                       <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-slate-500">Quantum Audit</span>

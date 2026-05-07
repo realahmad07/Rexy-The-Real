@@ -58,7 +58,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Use initializeFirestore with long polling to bypass potential proxy/firewall issues in the preview environment
+// Use initializeFirestore with settings optimized for the preview environment
 const databaseId = (firebaseConfig as any).firestoreDatabaseId || '(default)';
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
@@ -72,12 +72,18 @@ async function testConnection() {
 
     console.log(`[Firebase] Initializing connection to database: ${databaseId}`);
     
-    // We don't use getDocFromServer here because it is very strict and fails hard if offline.
-    // Instead, we let the application's actual data requests handle connectivity organically.
-    // This avoids scaring the user with "Failed" messages during slow initial boots.
-    console.log("[Firebase] Firestore initialization complete and background check quieted.");
+    // Attempt a real server request to verify connectivity
+    // We use a dummy doc path
+    const testDoc = doc(db, '_connection_test', 'once');
+    await getDocFromServer(testDoc).catch(() => {
+      // If server fetch fails, it might be first boot or offline
+      // We don't throw here to avoid blocking the app, but we log it
+      console.warn("[Firebase] Initial server connection test failed. Firestore may be in offline mode.");
+    });
+    
+    console.log("[Firebase] Firestore initialization complete.");
   } catch (error: any) {
-    // Silent catch for the initial test to prevent console noise
+    console.error("[Firebase] Connection test error:", error);
   }
 }
 

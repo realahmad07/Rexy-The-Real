@@ -259,6 +259,41 @@
   --color-black-matte: #121212;
 }
 
+/* Wallet Adapter UI Overrides to fix visibility issues */
+.wallet-adapter-dropdown {
+  position: relative;
+  display: inline-block;
+  z-index: 1000 !important;
+}
+
+.wallet-adapter-dropdown-list {
+  background: white !important;
+  color: #1e293b !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  padding: 8px !important;
+  top: 100% !important;
+  margin-top: 8px !important;
+}
+
+.wallet-adapter-dropdown-list-item {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  transition: all 0.2s !important;
+}
+
+.wallet-adapter-dropdown-list-item:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Ensure parents of nav don't clip the dropdown */
+nav {
+  overflow: visible !important;
+}
+
 @utility vertical-text {
   writing-mode: vertical-rl;
   text-orientation: mixed;

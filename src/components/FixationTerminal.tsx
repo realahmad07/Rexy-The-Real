@@ -20,15 +20,14 @@ const LOG_MESSAGES = {
   quantum: [
     "[QUANTUM] Initiating Post-Quantum Cryptography check...",
     "[QUANTUM] Analyzing Shor's Algorithm vulnerability surface...",
-    "[QUANTUM] Detecting Grover's Algorithm search complexity...",
-    "[QUANTUM] Scanning for lattice-based primitives...",
-    "[QUANTUM] Verifying Dilithium/Kyber compatibility...",
-    "[QUANTUM] PRE-OVERLOAD: Initializing Quantum Compute isolation...",
+    "[QUANTUM] CRITICAL: Quantum search complexity detected (Grover).",
     "[QUANTUM] STAGE 1: Entanglement verification complete.",
     "[QUANTUM] STAGE 2: Qubit stability confirmed at 99.8%.",
-    "[QUANTUM] STAGE 3: Quantum Logic mapping in progress...",
-    "[QUANTUM] WARNING: High complexity detected in instruction set.",
-    "[QUANTUM] STABILIZING: Adjusting decoherence parameters...",
+    "[QUANTUM] OVERLOAD: Quantum Compute isolation required...",
+    "[QUANTUM] WARNING: Decoherence levels spiking!",
+    "[QUANTUM] STABILIZING: Adjusting lattice-based parameters...",
+    "[QUANTUM] FIXATION: Re-mapping logic to PQC primitives...",
+    "[QUANTUM] STAGE 3: Quantum Logic mapping complete.",
     "[QUANTUM] READY: Proceeding to multi-dimensional AI pass."
   ],
   static: [
@@ -75,9 +74,11 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage,
 
     let messages = LOG_MESSAGES[stage as keyof typeof LOG_MESSAGES] || [];
     
-    // If it's the start of AI phase and Quantum is enabled, prepend/mix quantum logs
-    if (stage === 'ai' && isQuantum && logs.length < 5) {
-      messages = [...LOG_MESSAGES.quantum, ...messages];
+    // If it's the start of AI phase and Quantum is enabled, mix quantum logs
+    // We check if we are just entering AI phase
+    if (stage === 'ai' && isQuantum) {
+       // Prepend quantum logs if they aren't already there in the recent history
+       messages = [...LOG_MESSAGES.quantum, ...messages];
     }
 
     let currentIdx = 0;
@@ -238,9 +239,14 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage,
         {isOverloading && (
           <motion.div 
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ 
+              opacity: [0, 1, 0.8, 1, 0],
+              x: [0, -10, 10, -5, 5, 0],
+              filter: ["blur(0px)", "blur(2px)", "blur(0px)"]
+            }}
+            transition={{ duration: 0.5, repeat: 4 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 pointer-events-none bg-rexy-primary/10 backdrop-blur-[2px] flex items-center justify-center"
+            className="absolute inset-0 z-50 pointer-events-none bg-rexy-primary/20 backdrop-blur-[3px] flex items-center justify-center"
           >
             <div className="flex flex-col items-center gap-4">
                <div className="flex gap-4">
@@ -248,18 +254,18 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage,
                     <motion.div 
                       key={i}
                       animate={{ 
-                        scale: [1, 1.5, 1],
-                        rotate: [0, 90, 0],
-                        opacity: [0.5, 1, 0.5]
+                        scale: [1, 2, 0.5, 1.5, 1],
+                        rotate: [0, 180, -180, 360, 0],
+                        opacity: [0.5, 1, 0.3, 1, 0.5]
                       }}
-                      transition={{ duration: 0.5, repeat: 10, repeatType: "reverse" }}
-                      className="w-12 h-12 border-2 border-rexy-primary rounded-lg flex items-center justify-center text-rexy-primary"
+                      transition={{ duration: 0.4, repeat: Infinity }}
+                      className="w-16 h-16 border-2 border-rexy-primary rounded-lg flex items-center justify-center text-rexy-primary shadow-[0_0_20px_rgba(79,70,229,0.5)]"
                     >
-                      <Atom className="w-8 h-8 animate-spin" />
+                      <Atom className="w-10 h-10 animate-spin" />
                     </motion.div>
                   ))}
                </div>
-               <span className="text-[10px] font-black text-rexy-primary uppercase tracking-[0.5em] animate-pulse">Quantum Analysis Overload</span>
+               <span className="text-sm font-black text-white bg-rexy-primary px-4 py-1 rounded uppercase tracking-[1em] animate-pulse">SYSTEM OVERLOAD</span>
             </div>
           </motion.div>
         )}
@@ -267,7 +273,14 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage,
       
       {/* Glitch Effect during Quantum */}
       {isQuantum && stage === 'ai' && (
-        <div className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] animate-pulse" />
+        <motion.div 
+          animate={{ 
+            opacity: [0.1, 0.3, 0.1, 0.4, 0.1],
+            backgroundColor: ["rgba(79,70,229,0)", "rgba(79,70,229,0.1)", "rgba(168,85,247,0.1)", "rgba(79,70,229,0)"]
+          }}
+          transition={{ duration: 0.2, repeat: Infinity }}
+          className="absolute inset-0 pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" 
+        />
       )}
     </div>
   );

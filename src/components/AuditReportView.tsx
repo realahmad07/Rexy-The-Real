@@ -307,6 +307,11 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
   const [isApplyingFixes, setIsApplyingFixes] = useState(false);
   const [fixProgress, setFixProgress] = useState(0);
 
+  // Helper for consistent Solscan URLs using the active connection's cluster
+  const getAppSolscanUrl = (type: 'tx' | 'address' | 'token', id: string) => {
+    return getSolscanUrl(type, id, connection);
+  };
+
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
@@ -368,11 +373,11 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
         score: report.score,
         name: report.contractName || 'Unnamed Contract'
       }, connection);
-      setCertificateMint(result.mint);
+      setCertificateMint('Pending'); // Simulation: actual mint happens via backend trigger
       setCertificateSignature(result.signature || null);
       if (report.id) {
         await updateDoc(doc(db, 'audits', report.id), { 
-          certificateMint: result.mint,
+          certificateMint: 'Pending',
           certificateSignature: result.signature || null
         });
       }
@@ -662,12 +667,16 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
               <Hash className="w-3 h-3 text-rexy-primary" />
               {onChainProofSig ? (
                 <a 
-                  href={getSolscanUrl('tx', onChainProofSig)}
+                  href={getAppSolscanUrl('tx', onChainProofSig)}
                   target="_blank"
                   rel="noreferrer"
-                  className="hover:text-rexy-primary hover:underline flex items-center gap-1"
+                  className="hover:text-rexy-primary hover:underline flex items-center gap-1 group/hash"
+                  title="Verify on Solscan. Note: If it says 'unable to locate', please wait 30-60s for Solscan to index the transaction."
                 >
-                  {report.codeHash?.substring(0, 24)}...
+                  <span className="relative">
+                    {onChainProofSig.substring(0, 24)}...
+                    <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-rexy-primary group-hover/hash:w-full transition-all duration-300"></span>
+                  </span>
                   <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               ) : (
@@ -718,14 +727,26 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
       <div className="grid grid-cols-1 md:grid-cols-3 border-b border-slate-100 bg-slate-50/30">
         {onChainProofSig ? (
           <a
-            href={getSolscanUrl('tx', onChainProofSig)}
+            href={getAppSolscanUrl('tx', onChainProofSig)}
             target="_blank"
             rel="noreferrer"
             className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"
+            title="View Transaction on Solscan. (If missing, please wait 60s for indexing)"
           >
-            <CheckCircle className="w-5 h-5 text-emerald-500" />
-            <span className="text-xs font-black uppercase tracking-widest text-emerald-600">
-              Proof Recorded <ExternalLink className="w-3 h-3 inline ml-1 mb-0.5" />
+            <div className="relative">
+              <CheckCircle className="w-5 h-5 text-emerald-500 animate-pulse" />
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+            </div>
+            <span className="text-xs font-black uppercase tracking-widest text-emerald-600 flex flex-col items-start gap-0.5">
+              <div className="flex items-center gap-2">
+                <span className="relative">
+                  Proof Recorded
+                  <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-emerald-400/30"></span>
+                </span>
+                <div className="px-1.5 py-0.5 bg-emerald-100 rounded text-[8px] font-bold">VERIFIED</div>
+                <ExternalLink className="w-3 h-3 text-emerald-400" />
+              </div>
+              <span className="text-[8px] font-medium text-emerald-500/70 lowercase tracking-normal">Indexed on Solscan (ETA 30s)</span>
             </span>
           </a>
         ) : (
@@ -739,9 +760,9 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
           </button>
         )}
 
-        {certificateMint ? (
+        {certificateSignature ? (
           <a
-            href={getSolscanUrl('address', certificateMint)}
+            href={getAppSolscanUrl('tx', certificateSignature)}
             target="_blank"
             rel="noreferrer"
             className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"
@@ -764,7 +785,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
 
         {stakedProofSig ? (
           <a
-            href={getSolscanUrl('tx', stakedProofSig)}
+            href={getAppSolscanUrl('tx', stakedProofSig)}
             target="_blank"
             rel="noreferrer"
             className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"

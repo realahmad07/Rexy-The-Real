@@ -24,19 +24,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     };
     window.addEventListener('mousemove', handleMouseMove);
 
-    // Auto-detect Phantom if available
-    const detectPhantom = async () => {
-      const phantomWallet = wallets.find(w => w.adapter.name === 'Phantom');
-      if (phantomWallet && phantomWallet.readyState === 'Installed') {
-        console.log("Phantom detected, auto-selecting...");
-        select(phantomWallet.adapter.name);
-      }
-    };
-    
-    detectPhantom();
-
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [wallets, select]);
+  }, []);
 
   const handleCredentialLogin = (e: React.FormEvent) => {
     e.preventDefault();
