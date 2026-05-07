@@ -13,10 +13,10 @@ import { db, handleFirestoreError, OperationType } from './firebase';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppState } from './contexts/AppStateContext';
 import { cn } from './lib/utils';
-import { ShieldCheck, Database, Globe, Network } from 'lucide-react';
+import { ShieldCheck, Database, Globe, Network, LogOut } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey, disconnect } = useWallet();
   const [isWalletLoggedIn, setIsWalletLoggedIn] = useState(false);
   const [isGuestLoggedIn, setIsGuestLoggedIn] = useState(false);
   const { firebaseConnected, setFirebaseConnected } = useAppState();
@@ -123,6 +123,14 @@ const App: React.FC = () => {
   const handleCloseOnboarding = () => {
     setShowOnboarding(false);
     localStorage.setItem('rexy_onboarding_seen', 'true');
+  };
+
+  const handleLogout = async () => {
+    if (connected) {
+      await disconnect();
+    }
+    setIsWalletLoggedIn(false);
+    setIsGuestLoggedIn(false);
   };
 
   if (!isLoggedIn) {
@@ -237,7 +245,16 @@ const App: React.FC = () => {
             
             <div className="h-10 w-[1px] bg-rexy-border/50 hidden lg:block mx-1" />
             
-            <WalletMultiButton className="!bg-rexy-primary hover:!bg-indigo-500 !h-12 !px-8 !rounded-2xl !text-[10px] !font-black !transition-all !border-none shadow-xl shadow-rexy-primary/20 uppercase tracking-widest active:scale-95" />
+            <div className="flex items-center gap-2">
+              <WalletMultiButton className="!bg-rexy-primary hover:!bg-indigo-500 !h-12 !px-8 !rounded-2xl !text-[10px] !font-black !transition-all !border-none shadow-xl shadow-rexy-primary/20 uppercase tracking-widest active:scale-95" />
+              <button 
+                onClick={handleLogout}
+                className="p-3 bg-red-500/5 hover:bg-red-500/10 text-red-500 rounded-2xl border border-red-500/10 transition-all flex items-center justify-center group"
+                title="Logout / Disconnect"
+              >
+                <LogOut size={18} className="group-hover:scale-110 transition-transform" />
+              </button>
+            </div>
           </div>
 
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Key, ArrowRight, Cpu, Infinity as InfinityIcon, Sparkles, ChevronRight, Lock } from 'lucide-react';
 
@@ -8,6 +9,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const { select, wallets, connected } = useWallet();
   const [showCredentials, setShowCredentials] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -21,8 +23,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
     window.addEventListener('mousemove', handleMouseMove);
+
+    // Auto-detect Phantom if available
+    const detectPhantom = async () => {
+      const phantomWallet = wallets.find(w => w.adapter.name === 'Phantom');
+      if (phantomWallet && phantomWallet.readyState === 'Installed') {
+        console.log("Phantom detected, auto-selecting...");
+        select(phantomWallet.adapter.name);
+      }
+    };
+    
+    detectPhantom();
+
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [wallets, select]);
 
   const handleCredentialLogin = (e: React.FormEvent) => {
     e.preventDefault();

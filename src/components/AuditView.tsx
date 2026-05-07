@@ -277,7 +277,11 @@ const AuditView: React.FC = () => {
             </div>
             <div className="flex-1 p-0 flex flex-col items-center justify-center text-slate-500 overflow-hidden">
               {loading || paymentProcessing ? (
-                <FixationTerminal code={code} stage={auditStage === 'idle' ? 'payment' : auditStage} />
+                <FixationTerminal 
+                  code={code} 
+                  stage={auditStage === 'idle' ? 'payment' : auditStage} 
+                  isQuantum={isQuantumAudit}
+                />
               ) : (
                 <div className="p-8 flex flex-col items-center justify-center text-center space-y-6">
                   <div className="relative">

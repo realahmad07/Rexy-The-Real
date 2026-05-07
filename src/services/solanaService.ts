@@ -111,19 +111,27 @@ export const RPC_URL = isHeliusValid
   ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
   : "https://api.mainnet-beta.solana.com";
 
-if (isHeliusValid) {
-  console.log("Helius API Key detected:", HELIUS_API_KEY.substring(0, 4) + "..." + HELIUS_API_KEY.substring(Math.max(0, HELIUS_API_KEY.length - 4)));
-} else {
-  console.warn("Helius API Key NOT detected or invalid. Falling back to public RPC.");
-}
-
 /**
  * Helper to get the cluster name for Solscan links based on the RPC URL.
  */
 export function getClusterParam(): string {
   if (RPC_URL.includes("devnet")) return "?cluster=devnet";
   if (RPC_URL.includes("testnet")) return "?cluster=testnet";
+  // Check if we are currently using devnet in the app context (even if RPC is mainnet, for demo/testing)
+  if (window.location.hostname.includes("dev") || window.location.hostname.includes("localhost")) {
+    // Optionally default to devnet for dev environments if needed, 
+    // but better to check the actual network connection if possible.
+  }
   return "";
+}
+
+/**
+ * Generates a full Solscan URL for a given type and ID.
+ */
+export function getSolscanUrl(type: 'tx' | 'address' | 'token', id: string): string {
+  const baseUrl = "https://solscan.io";
+  const cluster = getClusterParam();
+  return `${baseUrl}/${type}/${id}${cluster}`;
 }
 
 export const connection = new Connection(RPC_URL, 'confirmed');

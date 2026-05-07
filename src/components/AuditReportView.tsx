@@ -17,7 +17,7 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
 
-import { getClusterParam } from '../services/solanaService';
+import { getClusterParam, getSolscanUrl } from '../services/solanaService';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 import { useRexyRegistry } from '../hooks/useRexyRegistry';
 
@@ -662,7 +662,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
               <Hash className="w-3 h-3 text-rexy-primary" />
               {onChainProofSig ? (
                 <a 
-                  href={`https://solscan.io/tx/${onChainProofSig}${getClusterParam()}`}
+                  href={getSolscanUrl('tx', onChainProofSig)}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-rexy-primary hover:underline flex items-center gap-1"
@@ -718,7 +718,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
       <div className="grid grid-cols-1 md:grid-cols-3 border-b border-slate-100 bg-slate-50/30">
         {onChainProofSig ? (
           <a
-            href={`https://solscan.io/tx/${onChainProofSig}${getClusterParam()}`}
+            href={getSolscanUrl('tx', onChainProofSig)}
             target="_blank"
             rel="noreferrer"
             className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"
@@ -741,7 +741,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
 
         {certificateMint ? (
           <a
-            href={`https://solscan.io/token/${certificateMint}${getClusterParam()}`}
+            href={getSolscanUrl('address', certificateMint)}
             target="_blank"
             rel="noreferrer"
             className="p-8 border-r border-slate-100 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"
@@ -764,7 +764,7 @@ export const AuditReportView: React.FC<AuditReportViewProps> = ({ report, onAppl
 
         {stakedProofSig ? (
           <a
-            href={`https://solscan.io/tx/${stakedProofSig}${getClusterParam()}`}
+            href={getSolscanUrl('tx', stakedProofSig)}
             target="_blank"
             rel="noreferrer"
             className="p-8 flex items-center justify-center gap-4 hover:bg-white transition-all group bg-emerald-50/30"

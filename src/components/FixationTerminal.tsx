@@ -6,6 +6,7 @@ import { cn } from '../lib/utils';
 interface FixationTerminalProps {
   code: string;
   stage: 'payment' | 'static' | 'ai' | 'blockchain' | 'idle';
+  isQuantum?: boolean;
 }
 
 const LOG_MESSAGES = {
@@ -15,6 +16,20 @@ const LOG_MESSAGES = {
     "[WALLET] User approved transaction. Propagating to cluster...",
     "[RPC] Confirmation received. Blockheight: 284192031",
     "[SYSTEM] Resource lock acquired. Starting deep analysis."
+  ],
+  quantum: [
+    "[QUANTUM] Initiating Post-Quantum Cryptography check...",
+    "[QUANTUM] Analyzing Shor's Algorithm vulnerability surface...",
+    "[QUANTUM] Detecting Grover's Algorithm search complexity...",
+    "[QUANTUM] Scanning for lattice-based primitives...",
+    "[QUANTUM] Verifying Dilithium/Kyber compatibility...",
+    "[QUANTUM] PRE-OVERLOAD: Initializing Quantum Compute isolation...",
+    "[QUANTUM] STAGE 1: Entanglement verification complete.",
+    "[QUANTUM] STAGE 2: Qubit stability confirmed at 99.8%.",
+    "[QUANTUM] STAGE 3: Quantum Logic mapping in progress...",
+    "[QUANTUM] WARNING: High complexity detected in instruction set.",
+    "[QUANTUM] STABILIZING: Adjusting decoherence parameters...",
+    "[QUANTUM] READY: Proceeding to multi-dimensional AI pass."
   ],
   static: [
     "[SYSTEM] Initiating Layer 1: Solana Vulnerability Library...",
@@ -44,25 +59,40 @@ const LOG_MESSAGES = {
   ]
 };
 
-export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage }) => {
+export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage, isQuantum }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const [highlightedLine, setHighlightedLine] = useState(0);
+  const [isOverloading, setIsOverloading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lines = code.split('\n').slice(0, 15); // Show first 15 lines for context
 
   useEffect(() => {
     if (stage === 'idle') {
       setLogs([]);
+      setIsOverloading(false);
       return;
     }
 
-    const messages = LOG_MESSAGES[stage as keyof typeof LOG_MESSAGES] || [];
+    let messages = LOG_MESSAGES[stage as keyof typeof LOG_MESSAGES] || [];
+    
+    // If it's the start of AI phase and Quantum is enabled, prepend/mix quantum logs
+    if (stage === 'ai' && isQuantum && logs.length < 5) {
+      messages = [...LOG_MESSAGES.quantum, ...messages];
+    }
+
     let currentIdx = 0;
 
     const logInterval = setInterval(() => {
       if (currentIdx < messages.length) {
+        const currentLog = messages[currentIdx];
+        
+        if (currentLog.includes('OVERLOAD')) {
+            setIsOverloading(true);
+            setTimeout(() => setIsOverloading(false), 2000);
+        }
+
         setLogs(prev => {
-          const next = [...prev, messages[currentIdx]];
+          const next = [...prev, currentLog];
           return next.slice(-50); // Keep last 50 logs for performance
         });
         currentIdx++;
@@ -186,6 +216,7 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage 
                   animate={{ opacity: 1, x: 0 }}
                   className={cn(
                     "flex gap-3",
+                    log && log.includes('[QUANTUM]') ? "text-purple-400" :
                     log && log.includes('[FIXATION]') ? "text-amber-400" : 
                     log && log.includes('[AI]') ? "text-rexy-primary" : 
                     log && log.includes('[BLOCKCHAIN]') ? "text-emerald-400" :
@@ -201,6 +232,60 @@ export const FixationTerminal: React.FC<FixationTerminalProps> = ({ code, stage 
           </div>
         </div>
       </div>
+      
+      {/* Quantum Overload Overlay */}
+      <AnimatePresence>
+        {isOverloading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 pointer-events-none bg-rexy-primary/10 backdrop-blur-[2px] flex items-center justify-center"
+          >
+            <div className="flex flex-col items-center gap-4">
+               <div className="flex gap-4">
+                  {[1, 2, 3].map(i => (
+                    <motion.div 
+                      key={i}
+                      animate={{ 
+                        scale: [1, 1.5, 1],
+                        rotate: [0, 90, 0],
+                        opacity: [0.5, 1, 0.5]
+                      }}
+                      transition={{ duration: 0.5, repeat: 10, repeatType: "reverse" }}
+                      className="w-12 h-12 border-2 border-rexy-primary rounded-lg flex items-center justify-center text-rexy-primary"
+                    >
+                      <Atom className="w-8 h-8 animate-spin" />
+                    </motion.div>
+                  ))}
+               </div>
+               <span className="text-[10px] font-black text-rexy-primary uppercase tracking-[0.5em] animate-pulse">Quantum Analysis Overload</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Glitch Effect during Quantum */}
+      {isQuantum && stage === 'ai' && (
+        <div className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] animate-pulse" />
+      )}
     </div>
   );
 };
+
+const Atom: React.FC<{ className?: string }> = ({ className }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <circle cx="12" cy="12" r="3" />
+    <ellipse cx="12" cy="12" rx="10" ry="4" strokeDasharray="4 4" />
+    <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)" strokeDasharray="4 4" />
+    <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)" strokeDasharray="4 4" />
+  </svg>
+);
