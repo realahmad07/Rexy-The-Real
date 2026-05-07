@@ -59,11 +59,11 @@ async function startServer() {
         return res.status(400).json({ error: "contractCode is required" });
       }
 
-      const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI;
+    const groqKey = process.env.GROQ_API_KEY || process.env.GROQ || process.env.VITE_GROQ_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.VITE_GEMINI_API_KEY;
 
-      const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_");
-      const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
+    const isValidGroqKey = (k) => k && typeof k === 'string' && (k.startsWith("gsk_") || k.length > 30);
+    const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
 
       const systemInstruction = `You are Rexy, a world-class Smart Contract Security Researcher and multi-chain expert. 
 Your mission is to perform deep security audits on smart contracts using a multi-stage analysis engine.
@@ -272,11 +272,11 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
   app.post("/api/ai/chat", async (req, res) => {
     try {
       const { message, history } = req.body;
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI;
-      const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.VITE_GEMINI_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY || process.env.GROQ || process.env.VITE_GROQ_API_KEY;
 
-      const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
-      const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_");
+    const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
+    const isValidGroqKey = (k) => k && typeof k === 'string' && (k.startsWith("gsk_") || k.length > 30);
 
       const systemInstruction = "You are Rexy Copilot, a highly advanced Smart Contract Security Engineer and Web3 expert, specifically focused on the Solana ecosystem. You are witty, sharp, and slightly cheeky but always incredibly accurate. You help developers find bugs, write secure Anchor (Rust) code, and understand post-quantum cryptography mitigation. Keep responses concise unless coding is required. Provide perfectly formatted markdown for any code snippets.";
 
@@ -378,10 +378,11 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
 
   // API routes
   app.get("/api/health", (req, res) => {
-    const groqKey = process.env.GROQ_API_KEY || process.env.GROQ;
-    const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI;
+    const groqKey = process.env.GROQ_API_KEY || process.env.GROQ || process.env.VITE_GROQ_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GEMINI || process.env.VITE_GEMINI_API_KEY;
     
-    const isValidGroqKey = (k) => k && typeof k === 'string' && k.startsWith("gsk_");
+    // Slightly more permissive validation for health check to account for different key formats
+    const isValidGroqKey = (k) => k && typeof k === 'string' && (k.startsWith("gsk_") || k.length > 30);
     const isValidGeminiKey = (k) => k && typeof k === 'string' && k.length > 20;
 
     const hasValidKey = isValidGroqKey(groqKey) || isValidGeminiKey(geminiKey);
@@ -390,6 +391,12 @@ For every issue, provide a clear 'fixedCode' snippet. Crucially, you MUST also p
       status: hasValidKey ? "ok" : "restricted", 
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
+      debug: {
+        groqConfigured: !!groqKey,
+        geminiConfigured: !!geminiKey,
+        groqValid: isValidGroqKey(groqKey),
+        geminiValid: isValidGeminiKey(geminiKey)
+      },
       providers: {
         audit: {
           name: "Groq Llama-3",

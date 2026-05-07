@@ -22,7 +22,7 @@ const App: React.FC = () => {
   const { firebaseConnected, setFirebaseConnected } = useAppState();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [systemHealth, setSystemHealth] = useState<'online' | 'offline'>('online');
+  const [systemHealth, setSystemHealth] = useState<'online' | 'offline' | 'restricted'>('online');
 
   const isLoggedIn = isWalletLoggedIn || isGuestLoggedIn;
 
@@ -50,6 +50,8 @@ const App: React.FC = () => {
         const data = await response.json();
         if (data.status === 'ok') {
           setSystemHealth('online');
+        } else if (data.status === 'restricted') {
+          setSystemHealth('restricted');
         } else {
           setSystemHealth('offline');
         }
@@ -193,12 +195,14 @@ const App: React.FC = () => {
                 "flex items-center gap-2.5 px-4 py-2 rounded-2xl border transition-all duration-300 shadow-sm",
                 systemHealth === 'online' 
                   ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500" 
-                  : "bg-rose-500/5 border-rose-500/20 text-rose-500"
+                  : systemHealth === 'restricted'
+                    ? "bg-amber-500/5 border-amber-500/20 text-amber-500 shadow-[0_0_15px_-5px_rgba(245,158,11,0.2)]"
+                    : "bg-rose-500/5 border-rose-500/20 text-rose-500 shadow-[0_0_15px_-5px_rgba(244,63,94,0.2)]"
               )}>
                 <div className="relative flex items-center justify-center">
                   <div className={cn(
                     "w-2.5 h-2.5 rounded-full border-2 border-white/20",
-                    systemHealth === 'online' ? "bg-emerald-500" : "bg-rose-500"
+                    systemHealth === 'online' ? "bg-emerald-500" : systemHealth === 'restricted' ? "bg-amber-500" : "bg-rose-500"
                   )} />
                   {systemHealth === 'online' && (
                     <div className="absolute inset-0 w-2.5 h-2.5 rounded-full animate-ping bg-emerald-500/40" />
@@ -207,7 +211,7 @@ const App: React.FC = () => {
                 <div className="flex flex-col -space-y-0.5">
                   <span className="text-[10px] font-black uppercase tracking-[0.1em]">AI Engine</span>
                   <span className="text-[8px] font-bold opacity-70 uppercase tracking-widest leading-none">
-                    {systemHealth === 'online' ? 'Connected' : 'Offline Mode'}
+                    {systemHealth === 'online' ? 'Active' : systemHealth === 'restricted' ? 'Restricted' : 'Offline'}
                   </span>
                 </div>
               </div>
