@@ -1,8 +1,8 @@
-# 🦖 Rexy AI | The Autonomous Solana Program Auditor
+# 🦖 Rexy AI | The Autonomous Solana Program Auditor 
 
 ### Real-time AI Security Intelligence Anchored on the Solana Blockchain
 
-Rexy AI is a cutting-edge security infrastructure designed to make the Solana ecosystem safer for everyone. By combining high-velocity Google Gemini AI models with Solana’s immutable ledger, Rexy audits smart contracts in seconds and provides cryptographically verifiable proof of security.
+Rexy AI is a cutting-edge security infrastructure designed to make the Solana ecosystem safer for everyone. By combining high-velocity  AI models with Solana’s immutable ledger, Rexy Quantum proof audits smart contracts in seconds and provides cryptographically verifiable proof of security.
 
 ---
 
@@ -15,7 +15,7 @@ Instantly scan Rust and Anchor programs for critical vulnerabilities including:
 - Missing ownership checks
 - Unsafe authority patterns
 - Logic vulnerabilities
-
+- Quantum check  
 ---
 
 ## ⛓️ Immutable Memo Proofs
@@ -39,7 +39,7 @@ A real-time ecosystem dashboard tracking:
 - Security incidents
 - Protocol risk metrics
 - Ecosystem audit activity
-
+- Quantum Risk
 ---
 
 ## 🤖 Copilot Security Assistant
@@ -79,8 +79,8 @@ Developers can detect vulnerabilities during development, while users gain acces
 - Memo Program
 
 ## AI Engine
-- Google Gemini Pro
-- Groq Latest
+- Latest Leaning Models
+- Ai Based
 - Installed Solana Libraries
 
 ## Frontend
