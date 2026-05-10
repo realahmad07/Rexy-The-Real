@@ -53,7 +53,7 @@ An AI-powered security copilot that helps developers:
 
 # 🏆 Hackathon Submission
 
-Rexy AI is built for the **Solana Renaissance Hackathon** under the **Infrastructure & Tooling** track.
+Rexy AI is built for the *Hackathon**
 
 ---
 
